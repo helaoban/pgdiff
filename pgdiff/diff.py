@@ -5,7 +5,7 @@ from . import objects as obj, helpers
 
 
 if t.TYPE_CHECKING:
-    from .objects import Table, DBObject, Index, View, Sequence, Enum
+    from .objects import Table, DBObject, Index, View, Sequence, Enum, Function
     from .objects import DatabaseDiff
     Column = t.Tuple[str, str, str, bool]
 
@@ -141,8 +141,30 @@ def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
     return None
 
 
+def diff_function(source: "Function", target: "Function") -> t.Optional[str]:
+    if source["definition"] != target["definition"]:
+        return target["definition"]
+    return None
+
+
 def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
-    return []
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["functions"]), set(target["functions"]))
+    for function_id in source_unique:
+        source_function = source["functions"][function_id]
+        drop = "DROP FUNCTION %s" % source_function["signature"]
+        rv.append(drop)
+    for function_id in target_unique:
+        target_function = target["functions"][function_id]
+        rv.append(target_function["definition"])
+    for function_id in common:
+        source_function = source["functions"][function_id]
+        target_function = target["functions"][function_id]
+        diff = diff_function(source_function, target_function)
+        if diff:
+            rv.append(diff)
+    return rv
 
 
 def diff_enum(source: "Enum", target: "Enum") -> t.List[str]:
