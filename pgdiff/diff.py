@@ -141,8 +141,6 @@ def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
     return None
 
 
-
-
 def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
     return []
 
