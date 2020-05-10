@@ -5,7 +5,7 @@ from . import objects as obj, helpers
 
 
 if t.TYPE_CHECKING:
-    from .objects import Table, DBObject, Index, View, Sequence
+    from .objects import Table, DBObject, Index, View, Sequence, Enum
     from .objects import DatabaseDiff
     Column = t.Tuple[str, str, str, bool]
 
@@ -145,8 +145,37 @@ def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
     return []
 
 
+def diff_enum(source: "Enum", target: "Enum") -> t.List[str]:
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["elements"]), set(target["elements"]))
+    if source_unique:
+        drop = "DROP TYPE %s" % source["name"]
+        create = helpers.make_enum_create(target)
+        rv.extend([drop, create])
+        return rv
+
+    for el in target_unique:
+        alter = "ALTER TYPE %s ADD VALUE '%s'" % (target["name"], el)
+        rv.append(alter)
+
+    return rv
+
+
 def diff_enums(source: obj.Database, target: obj.Database) -> t.List[str]:
-    return []
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["enums"]), set(target["enums"]))
+    for enum_id in source_unique:
+        rv.append("DROP TYPE %s" % enum_id)
+    for enum_id in target_unique:
+        target_enum = target["enums"][enum_id]
+        rv.append(helpers.make_enum_create(target_enum))
+    for enum_id in common:
+        source_enum = source["enums"][enum_id]
+        target_enum = target["enums"][enum_id]
+        rv.extend(diff_enum(source_enum, target_enum))
+    return rv
 
 
 def diff_sequences(source: obj.Database, target: obj.Database) -> t.List[str]:

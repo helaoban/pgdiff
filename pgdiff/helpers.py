@@ -2,7 +2,7 @@ import typing as t
 
 
 if t.TYPE_CHECKING:
-    from .objects import Table, DBObject, Index, View, Sequence
+    from .objects import Table, DBObject, Index, View, Sequence, Enum
     Column = t.Tuple[str, str, str, bool]
 
 
@@ -30,6 +30,13 @@ def make_sequence_create(sequence: "Sequence") -> str:
         rv += " NO CYCLE"
 
     return rv
+
+
+def make_enum_create(enum: "Enum") -> str:
+    return "CREATE TYPE %s AS ENUM (%s)" % (
+        enum["name"],
+        ", ".join("'%s'" % e for e in enum["elements"])
+    )
 
 
 def make_table_create(table: "Table") -> str:
