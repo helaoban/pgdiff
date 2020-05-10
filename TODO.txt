@@ -1,0 +1,4 @@
+- Trailing commas
+    The query-able definitions of (at least) some db objects have trailing commas.
+    We are appending commas to all statements after the diff, which for some statements
+    results in double commas.
