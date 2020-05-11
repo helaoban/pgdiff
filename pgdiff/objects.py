@@ -104,6 +104,7 @@ class Function(te.TypedDict):
 
 
 class Trigger(te.TypedDict):
+    obj_type: te.Literal["trigger"]
     oid: str
     schema: str
     name: str
