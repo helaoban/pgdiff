@@ -274,12 +274,16 @@ def diff_tables(source: obj.Database, target: obj.Database) -> t.List[str]:
 
 
 def diff(source: obj.Database, target: obj.Database) -> t.List[str]:
+    statements = []
+    statements.extend(diff_tables(source, target))
+    statements.extend(diff_views(source, target))
+    statements.extend(diff_indices(source, target))
+    statements.extend(diff_sequences(source, target))
+    statements.extend(diff_enums(source, target))
+    statements.extend(diff_functions(source, target))
+    statements.extend(diff_triggers(source, target))
+
     rv = []
-    rv.extend(diff_tables(source, target))
-    rv.extend(diff_views(source, target))
-    rv.extend(diff_indices(source, target))
-    rv.extend(diff_sequences(source, target))
-    rv.extend(diff_enums(source, target))
-    rv.extend(diff_functions(source, target))
-    rv.extend(diff_triggers(source, target))
+    for s in statements:
+        rv.append(helpers.format_statement(s))
     return rv

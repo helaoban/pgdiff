@@ -17,5 +17,5 @@ def sync(schema: str, dsn: str):
             target_schema = inspect(target)
             current_schema = inspect(current)
             statements = diff(current_schema, target_schema)
-            script = ";\n".join(statements) + ";"
+            script = "\n\n".join(statements)
             print(script)

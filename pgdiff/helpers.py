@@ -94,3 +94,10 @@ def get_constraint(table: obj.Table, name: str) -> obj.Constraint:
         table["constraints"][i],
         table["constraint_definitions"][i],
     )
+
+
+def format_statement(statement: str) -> str:
+    statement = statement.strip()
+    if not statement.endswith(";"):
+        statement = statement + ";"
+    return statement
