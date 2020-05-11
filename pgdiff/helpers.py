@@ -30,7 +30,7 @@ def make_sequence_create(sequence: obj.Sequence) -> str:
 
 def make_enum_create(enum: obj.Enum) -> str:
     return "CREATE TYPE %s AS ENUM (%s)" % (
-        enum["name"],
+        get_obj_id(enum),
         ", ".join("'%s'" % e for e in enum["elements"])
     )
 

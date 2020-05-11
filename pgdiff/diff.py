@@ -21,7 +21,7 @@ def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
 def diff_view(source: obj.View, target: obj.View) -> t.Optional[str]:
     if source["definition"] != target["definition"]:
         return (
-            "CREATE OR REPLACE VIEW %s\n" % target["name"]
+            "CREATE OR REPLACE VIEW %s\n" % helpers.get_obj_id(target)
         ) + target["definition"]
     return None
 
@@ -97,8 +97,9 @@ def diff_table(source: obj.Table, target: obj.Table) -> t.Optional[str]:
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
     if alterations:
+        table_id = helpers.get_obj_id(target)
         return "ALTER TABLE {name} {alterations}".format(
-            name=target["name"],
+            name=table_id,
             alterations=" ".join(alterations),
         )
     return None
@@ -136,7 +137,7 @@ def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
         set(source["functions"]), set(target["functions"]))
     for function_id in source_unique:
         source_function = source["functions"][function_id]
-        drop = "DROP FUNCTION %s" % source_function["signature"]
+        drop = "DROP FUNCTION %s" % function_id
         rv.append(drop)
     for function_id in target_unique:
         target_function = target["functions"][function_id]
@@ -155,13 +156,15 @@ def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
     common, source_unique, target_unique = diff_identifiers(
         set(source["elements"]), set(target["elements"]))
     if source_unique:
-        drop = "DROP TYPE %s" % source["name"]
+        enum_id = helpers.get_obj_id(source)
+        drop = "DROP TYPE %s" % enum_id
         create = helpers.make_enum_create(target)
         rv.extend([drop, create])
         return rv
 
     for el in target_unique:
-        alter = "ALTER TYPE %s ADD VALUE '%s'" % (target["name"], el)
+        enum_id = helpers.get_obj_id(target)
+        alter = "ALTER TYPE %s ADD VALUE '%s'" % (enum_id, el)
         rv.append(alter)
 
     return rv
@@ -233,7 +236,7 @@ def diff_views(source: obj.Database, target: obj.Database) -> t.List[str]:
     for view_id in target_unique:
         target_view = target["views"][view_id]
         statement = (
-            "CREATE VIEW %s\n" % target_view["name"]
+            "CREATE VIEW %s\n" % view_id
         ) + target_view["definition"]
         rv.append(statement)
 
