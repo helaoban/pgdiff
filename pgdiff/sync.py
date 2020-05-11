@@ -1,5 +1,6 @@
 import contextlib
-from .diff import diff, inspect
+from .diff import diff
+from .inspect import inspect
 from .utils import temp_db, quick_cursor
 
 
