@@ -1,6 +1,7 @@
 SELECT
-    tg.tgname  AS "name",
+    tg.oid AS oid,
     nsp.nspname AS "schema",
+    tg.tgname  AS "name",
     cls.relname AS table_name,
     pg_get_triggerdef(tg.oid) AS definition,
     proc.proname AS proc_name,

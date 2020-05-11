@@ -25,6 +25,7 @@ INDEX_QUERY = os.path.join(SQL_DIR, "indices.sql")
 SEQUENCE_QUERY = os.path.join(SQL_DIR, "sequences.sql")
 ENUM_QUERY = os.path.join(SQL_DIR, "enums.sql")
 FUNCTION_QUERY = os.path.join(SQL_DIR, "functions2.sql")
+TRIGGER_QUERY = os.path.join(SQL_DIR, "triggers.sql")
 
 T = t.TypeVar("T")
 IT = t.TypeVar("IT", bound=obj.DBObject)
@@ -54,13 +55,15 @@ def inspect(cur) -> obj.Database:
     sequences = query(cur, SEQUENCE_QUERY, "sequence")  # type: t.List[obj.Sequence]
     enums = query(cur, ENUM_QUERY, "enum")  # type: t.List[obj.Enum]
     functions = query(cur, FUNCTION_QUERY, "function")  # type: t.List[obj.Function]
+    triggers = query(cur, TRIGGER_QUERY, "trigger")  # type: t.List[obj.Trigger]
     return dict(
         tables=_index_by_id(tables),
         views=_index_by_id(views),
         indices=_index_by_id(indices),
         enums=_index_by_id(enums),
         sequences=_index_by_id(sequences),
-        functions=_index_by_id(functions)
+        functions=_index_by_id(functions),
+        triggers=_index_by_id(triggers),
     )
 
 
@@ -164,8 +167,28 @@ def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
     return None
 
 
+def diff_triggers(source: obj.Database, target: obj.Database) -> t.List[str]:
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["triggers"]), set(target["triggers"]))
+    for trigger_id in source_unique:
+        drop = "DROP TRIGGER %s" % trigger_id
+        rv.append(drop)
+    for trigger_id in target_unique:
+        target_trigger = target["triggers"][trigger_id]
+        rv.append(target_trigger["definition"])
+    for trigger_id in common:
+        source_trigger = source["triggers"][trigger_id]
+        target_trigger = target["triggers"][trigger_id]
+        if source_trigger["definition"] != target_trigger["definition"]:
+            drop = "DROP TRIGGER %s" % trigger_id
+            rv.extend([drop, target_trigger["definition"]])
+    return rv
+
+
 def diff_function(source: "Function", target: "Function") -> t.Optional[str]:
     if source["definition"] != target["definition"]:
+        # TODO definition needs to be CREATE OR REPLACE
         return target["definition"]
     return None
 
@@ -318,4 +341,5 @@ def diff(source: obj.Database, target: obj.Database) -> t.List[str]:
     rv.extend(diff_sequences(source, target))
     rv.extend(diff_enums(source, target))
     rv.extend(diff_functions(source, target))
+    rv.extend(diff_triggers(source, target))
     return rv

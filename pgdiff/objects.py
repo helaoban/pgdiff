@@ -103,6 +103,17 @@ class Function(te.TypedDict):
     definition: str
 
 
+class Trigger(te.TypedDict):
+    oid: str
+    schema: str
+    name: str
+    table_name: str
+    definition: str
+    proc_name: str
+    proc_schema: str
+    enabled: bool
+
+
 class Database(te.TypedDict):
     tables: t.Dict[str, Table]
     views: t.Dict[str, View]
@@ -110,6 +121,7 @@ class Database(te.TypedDict):
     enums: t.Dict[str, Enum]
     sequences: t.Dict[str, Sequence]
     functions: t.Dict[str, Function]
+    triggers: t.Dict[str, Trigger]
 
 
 DBObject = t.Union[
@@ -119,4 +131,5 @@ DBObject = t.Union[
     Sequence,
     Enum,
     Function,
+    Trigger,
 ]

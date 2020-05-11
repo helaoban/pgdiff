@@ -78,6 +78,8 @@ def get_obj_id(obj: "DBObject") -> str:
         return "%s.%s" % (obj["schema"], obj["name"])
     if obj["obj_type"] == "function":
         return "%s.%s" % (obj["schema"], obj["signature"])
+    if obj["obj_type"] == "trigger":
+        return "%s.%s" % (obj["schema"], obj["name"])
     raise ValueError("Invalid obj: %s" % obj)
 
 
