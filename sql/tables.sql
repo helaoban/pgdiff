@@ -30,6 +30,14 @@ WITH extension_oids AS (
     -- INTERNAL 
     AND n.nspname NOT LIKE 'pg_toast_temp_%'
     GROUP BY c.oid, n.nspname
+), table_constraints AS (
+    SELECT
+        t.oid AS oid,
+        array_agg(pcn.conname) AS constraints,
+        array_agg(pg_get_constraintdef(pcn.oid)) AS constraint_definitions
+    FROM tables t
+    LEFT OUTER JOIN pg_constraint pcn ON pcn.conrelid = t.oid
+    GROUP BY t.oid
 )
 SELECT
     t.oid,
@@ -40,6 +48,8 @@ SELECT
     t.column_types as column_types,
     t.column_defaults as column_defaults,
     t.not_null_columns as not_null_columns,
+    tc.constraints as constraints,
+    tc.constraint_definitions as constraint_definitions,
     (
       SELECT
           '"' || nmsp_parent.nspname || '"."' || parent.relname || '"' AS parent
@@ -62,4 +72,5 @@ SELECT
     c.relpersistence AS persistence
 FROM 
     tables t
-    INNER JOIN pg_catalog.pg_class c ON c.oid = t.oid;
+    INNER JOIN pg_catalog.pg_class c ON c.oid = t.oid
+    INNER JOIN table_constraints tc ON tc.oid = t.oid;
