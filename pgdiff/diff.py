@@ -32,21 +32,21 @@ def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
     tname, ttype, tdefault, tnotnull = target
 
     if stype != ttype:
-        change = "ALTER COLUMN TYPE %s" % ttype
+        change = "ALTER COLUMN %s TYPE %s" % (tname, ttype)
         rv.append(change)
 
     if sdefault != tdefault:
         if tdefault is None:
-            change = "ALTER COLUMN DROP DEFAULT"
+            change = "ALTER COLUMN %s DROP DEFAULT" % tname
         else:
-            change = "ALTER COLUMN SET DEFAULT %s" % tdefault
+            change = "ALTER COLUMN %s SET DEFAULT %s" % (tname, tdefault)
         rv.append(change)
 
     if snotnull != tnotnull:
         if tnotnull is True:
-            change = "ALTER COLUMN SET NOT NULL"
+            change = "ALTER COLUMN %s SET NOT NULL" % tname
         else:
-            change = "ALTER COLUMN DROP NOT NULL"
+            change = "ALTER COLUMN %s DROP NOT NULL" % tname
         rv.append(change)
 
     return rv
