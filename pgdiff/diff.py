@@ -46,7 +46,7 @@ def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
         if tnotnull is True:
             change = "ALTER COLUMN SET NOT NULL"
         else:
-            change = "ALTER COLUMN SDROP NOT NULL"
+            change = "ALTER COLUMN DROP NOT NULL"
         rv.append(change)
 
     return rv
