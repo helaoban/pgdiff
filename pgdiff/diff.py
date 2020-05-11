@@ -8,6 +8,7 @@ if t.TYPE_CHECKING:
     from .objects import Table, DBObject, Index, View, Sequence, Enum, Function
     from .objects import DatabaseDiff
     Column = t.Tuple[str, str, str, bool]
+    Constraint = t.Tuple[str, str]
 
 
 SQL_DIR = os.path.normpath(
@@ -111,28 +112,50 @@ def diff_column(source: "Column", target: "Column") -> t.List[str]:
     return rv
 
 
-def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
-    alterations = []
-    source_columns = frozenset(source["columns"])
-    target_columns = frozenset(target["columns"])
-
-    common = source_columns & target_columns
-    unique_to_source = source_columns - target_columns
-    unique_to_target = target_columns - source_columns
+def diff_columns(source: "Table", target: "Table") -> t.List[str]:
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["columns"]), set(target["columns"]))
 
     for col_name in common:
         source_col = helpers.get_column(source, col_name)
         target_col = helpers.get_column(target, col_name)
-        alterations.extend(
-            diff_column(source_col, target_col))
+        rv.extend(diff_column(source_col, target_col))
 
-    for col_name in unique_to_source:
-        alterations.append("DROP COLUMN %s" % col_name)
+    for col_name in source_unique:
+        rv.append("DROP COLUMN %s" % col_name)
 
-    for col_name in unique_to_target:
+    for col_name in target_unique:
         col = helpers.get_column(target, col_name)
-        alterations.append(helpers.make_column_add(col))
+        rv.append(helpers.make_column_add(col))
+    return rv
 
+
+def diff_constraints(source: "Table", target: "Table") -> t.List[str]:
+    rv = []
+    common, source_unique, target_unique = diff_identifiers(
+        set(source["constraints"]), set(target["constraints"]))
+    for constraint_name in source_unique:
+        drop = "DROP CONSTRAINT %s" % constraint_name
+        rv.append(drop)
+    for constraint_name in target_unique:
+        _, definition = helpers.get_constraint(target, constraint_name)
+        add = "ADD %s %s" % (constraint_name, definition)
+        rv.append(add)
+    for constraint_name in common:
+        _, source_definition = helpers.get_constraint(source, constraint_name)
+        _, target_definition = helpers.get_constraint(target, constraint_name)
+        if source_definition != target_definition:
+            drop = "DROP CONSTRAINT %s" % constraint_name
+            add = "ADD %s %s" % (constraint_name, target_definition)
+            rv.extend([drop, add])
+    return rv
+
+
+def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
+    alterations = []
+    alterations.extend(diff_columns(source, target))
+    alterations.extend(diff_constraints(source, target))
     if alterations:
         return "ALTER TABLE {name} {alterations}".format(
             name=target["name"],

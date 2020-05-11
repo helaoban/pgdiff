@@ -4,6 +4,7 @@ import typing as t
 if t.TYPE_CHECKING:
     from .objects import Table, DBObject, Index, View, Sequence, Enum
     Column = t.Tuple[str, str, str, bool]
+    Constraint = t.Tuple[str, str]
 
 
 def make_sequence_create(sequence: "Sequence") -> str:
@@ -87,4 +88,12 @@ def get_column(table: "Table", name: str) -> "Column":
         table["column_types"][i],
         table["column_defaults"][i],
         table["not_null_columns"][i],
+    )
+
+
+def get_constraint(table: "Table", name: str) -> "Constraint":
+    i = table["constraints"].index(name)
+    return (
+        table["constraints"][i],
+        table["constraint_definitions"][i],
     )
