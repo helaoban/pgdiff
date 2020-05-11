@@ -1,6 +1,5 @@
 import typing as t
 import typing_extensions as te
-from . import helpers
 
 
 Column = t.Tuple[str, str, str, int]
@@ -14,6 +13,7 @@ DBObjectFieldName = t.Union[
     te.Literal["functions"],
 ]
 DatabaseDiff = t.Dict[DBObjectFieldName, DatabaseIdDiff]
+Constraint = t.Tuple[str, str]
 
 
 class Table(te.TypedDict):

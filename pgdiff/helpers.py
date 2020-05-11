@@ -1,13 +1,8 @@
 import typing as t
+from . import objects as obj
 
 
-if t.TYPE_CHECKING:
-    from .objects import Table, DBObject, Index, View, Sequence, Enum
-    Column = t.Tuple[str, str, str, bool]
-    Constraint = t.Tuple[str, str]
-
-
-def make_sequence_create(sequence: "Sequence") -> str:
+def make_sequence_create(sequence: obj.Sequence) -> str:
     rv = "CREATE SEQUENCE %s" % sequence["name"]
     rv += " AS %s" % sequence["data_type"]
     rv += " INCREMENT BY %s" % sequence["increment"]
@@ -33,14 +28,14 @@ def make_sequence_create(sequence: "Sequence") -> str:
     return rv
 
 
-def make_enum_create(enum: "Enum") -> str:
+def make_enum_create(enum: obj.Enum) -> str:
     return "CREATE TYPE %s AS ENUM (%s)" % (
         enum["name"],
         ", ".join("'%s'" % e for e in enum["elements"])
     )
 
 
-def make_table_create(table: "Table") -> str:
+def make_table_create(table: obj.Table) -> str:
     column_statements = []
     for col_name in table["columns"]:
         column = get_column(table, col_name)
@@ -53,7 +48,7 @@ def make_table_create(table: "Table") -> str:
     )
 
 
-def make_column_add(column: "Column") -> str:
+def make_column_add(column: obj.Column) -> str:
     name, type, default, notnull = column
     default_key = " DEFAULT" if default != "NULL" else ""
     default_val = " %s" % default if default != "NULL" else ""
@@ -65,7 +60,7 @@ def make_column_add(column: "Column") -> str:
     )
 
 
-def get_obj_id(obj: "DBObject") -> str:
+def get_obj_id(obj: obj.DBObject) -> str:
     if obj["obj_type"] == "table":
         return "%s.%s" % (obj["schema"], obj["name"])
     if obj["obj_type"] == "view":
@@ -83,7 +78,7 @@ def get_obj_id(obj: "DBObject") -> str:
     raise ValueError("Invalid obj: %s" % obj)
 
 
-def get_column(table: "Table", name: str) -> "Column":
+def get_column(table: obj.Table, name: str) -> obj.Column:
     i = table["columns"].index(name)
     return (
         table["columns"][i],
@@ -93,7 +88,7 @@ def get_column(table: "Table", name: str) -> "Column":
     )
 
 
-def get_constraint(table: "Table", name: str) -> "Constraint":
+def get_constraint(table: obj.Table, name: str) -> obj.Constraint:
     i = table["constraints"].index(name)
     return (
         table["constraints"][i],

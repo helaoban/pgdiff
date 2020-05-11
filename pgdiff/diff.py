@@ -4,13 +4,6 @@ import typing as t
 from . import objects as obj, helpers
 
 
-if t.TYPE_CHECKING:
-    from .objects import Table, DBObject, Index, View, Sequence, Enum, Function
-    from .objects import DatabaseDiff
-    Column = t.Tuple[str, str, str, bool]
-    Constraint = t.Tuple[str, str]
-
-
 def diff_identifiers(
     source: t.Set[str],
     target: t.Set[str],
@@ -21,11 +14,11 @@ def diff_identifiers(
     return common, unique_to_source, unique_to_target
 
 
-def diff_index(source: "Index", target: "Index") -> t.List[str]:
+def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
     return []
 
 
-def diff_view(source: "View", target: "View") -> t.Optional[str]:
+def diff_view(source: obj.View, target: obj.View) -> t.Optional[str]:
     if source["definition"] != target["definition"]:
         return (
             "CREATE OR REPLACE VIEW %s\n" % target["name"]
@@ -33,7 +26,7 @@ def diff_view(source: "View", target: "View") -> t.Optional[str]:
     return None
 
 
-def diff_column(source: "Column", target: "Column") -> t.List[str]:
+def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
     rv = []
     sname, stype, sdefault, snotnull = source
     tname, ttype, tdefault, tnotnull = target
@@ -59,7 +52,7 @@ def diff_column(source: "Column", target: "Column") -> t.List[str]:
     return rv
 
 
-def diff_columns(source: "Table", target: "Table") -> t.List[str]:
+def diff_columns(source: obj.Table, target: obj.Table) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
         set(source["columns"]), set(target["columns"]))
@@ -78,7 +71,7 @@ def diff_columns(source: "Table", target: "Table") -> t.List[str]:
     return rv
 
 
-def diff_constraints(source: "Table", target: "Table") -> t.List[str]:
+def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
         set(source["constraints"]), set(target["constraints"]))
@@ -99,7 +92,7 @@ def diff_constraints(source: "Table", target: "Table") -> t.List[str]:
     return rv
 
 
-def diff_table(source: "Table", target: "Table") -> t.Optional[str]:
+def diff_table(source: obj.Table, target: obj.Table) -> t.Optional[str]:
     alterations = []
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
@@ -130,7 +123,7 @@ def diff_triggers(source: obj.Database, target: obj.Database) -> t.List[str]:
     return rv
 
 
-def diff_function(source: "Function", target: "Function") -> t.Optional[str]:
+def diff_function(source: obj.Function, target: obj.Function) -> t.Optional[str]:
     if source["definition"] != target["definition"]:
         # TODO definition needs to be CREATE OR REPLACE
         return target["definition"]
@@ -157,7 +150,7 @@ def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
     return rv
 
 
-def diff_enum(source: "Enum", target: "Enum") -> t.List[str]:
+def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
         set(source["elements"]), set(target["elements"]))
