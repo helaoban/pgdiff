@@ -16,6 +16,7 @@ WITH extension_oids AS (
         LEFT JOIN pg_catalog.pg_attribute a
             ON a.attrelid = c.oid 
             AND a.attnum > 0
+            AND a.attisdropped = FALSE
         LEFT JOIN pg_catalog.pg_attrdef ad
             ON a.attrelid = ad.adrelid
             AND a.attnum = ad.adnum
