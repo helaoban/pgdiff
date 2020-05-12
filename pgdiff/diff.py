@@ -67,7 +67,7 @@ def diff_columns(source: obj.Table, target: obj.Table) -> t.List[str]:
 
     for col_name in target_unique:
         col = helpers.get_column(target, col_name)
-        rv.append(helpers.make_column_add(col))
+        rv.append("ADD COLUMN %s" % helpers.make_column(col))
     return rv
 
 

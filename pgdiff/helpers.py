@@ -39,7 +39,7 @@ def make_table_create(table: obj.Table) -> str:
     column_statements = []
     for col_name in table["columns"]:
         column = get_column(table, col_name)
-        column_str = make_column_add(column)
+        column_str = make_column(column)
         column_statements.append(column_str);
     return "CREATE {}TABLE {} ({})".format(
         "UNLOGGED" if table["persistence"] == "u" else "",
@@ -48,11 +48,11 @@ def make_table_create(table: obj.Table) -> str:
     )
 
 
-def make_column_add(column: obj.Column) -> str:
+def make_column(column: obj.Column) -> str:
     name, type, default, notnull = column
     default_key = " DEFAULT" if default != "NULL" else ""
     default_val = " %s" % default if default != "NULL" else ""
-    return "ADD COLUMN {name} {type}{default_key}{default_val}".format(
+    return "{name} {type}{default_key}{default_val}".format(
         name=name,
         type=type,
         default_key=default_key,
