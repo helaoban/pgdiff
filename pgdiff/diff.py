@@ -21,7 +21,7 @@ def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
 def diff_view(source: obj.View, target: obj.View) -> t.Optional[str]:
     if source["definition"] != target["definition"]:
         return (
-            "CREATE OR REPLACE VIEW %s\n" % helpers.get_obj_id(target)
+            "CREATE OR REPLACE VIEW %s AS\n" % helpers.get_obj_id(target)
         ) + target["definition"]
     return None
 
@@ -236,7 +236,7 @@ def diff_views(source: obj.Database, target: obj.Database) -> t.List[str]:
     for view_id in target_unique:
         target_view = target["views"][view_id]
         statement = (
-            "CREATE VIEW %s\n" % view_id
+            "CREATE VIEW %s AS\n" % view_id
         ) + target_view["definition"]
         rv.append(statement)
 
