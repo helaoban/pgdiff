@@ -212,7 +212,8 @@ def diff_indices(source: obj.Database, target: obj.Database) -> t.List[str]:
 
     for index_id in target_unique:
         target_index = target["indices"][index_id]
-        rv.append(target_index["definition"])
+        if not target_index["is_unique"] and not target_index["is_pk"]:
+            rv.append(target_index["definition"])
 
     for index_id in common:
         source_index = source["indices"][index_id]

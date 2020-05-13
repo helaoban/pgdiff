@@ -34,6 +34,8 @@ def make_enum_create(enum: obj.Enum) -> str:
         ", ".join("'%s'" % e for e in enum["elements"])
     )
 
+def make_constraint(constraint: obj.Constraint) -> str:
+    return "CONSTRAINT %s %s" % constraint
 
 def make_table_create(table: obj.Table) -> str:
     column_statements = []
@@ -41,12 +43,20 @@ def make_table_create(table: obj.Table) -> str:
         column = get_column(table, col_name)
         column_str = make_column(column)
         column_statements.append(column_str);
-    return "CREATE {}TABLE {} ({})".format(
+    rv = "CREATE {}TABLE {} ({}".format(
         "UNLOGGED" if table["persistence"] == "u" else "",
         table["name"],
         ", ".join(column_statements)
     )
-
+    constraints = [
+        make_constraint(get_constraint(table, c))
+        for c in table["constraints"]
+    ]
+    if constraints:
+        rv = "{}, {})".format(rv, ", ".join(constraints))
+    else:
+        rv = rv + ")"
+    return rv
 
 def make_column(column: obj.Column) -> str:
     name, type, default, notnull = column
