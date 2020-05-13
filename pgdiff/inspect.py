@@ -1,5 +1,6 @@
 import os
 import typing as t
+import networkx as nx  # type: ignore
 from . import objects as obj, helpers
 
 SQL_DIR = os.path.normpath(
@@ -17,6 +18,7 @@ SEQUENCE_QUERY = os.path.join(SQL_DIR, "sequences.sql")
 ENUM_QUERY = os.path.join(SQL_DIR, "enums.sql")
 FUNCTION_QUERY = os.path.join(SQL_DIR, "functions2.sql")
 TRIGGER_QUERY = os.path.join(SQL_DIR, "triggers.sql")
+DEPENDENCY_QUERY = os.path.join(SQL_DIR, "dependencies.sql")
 
 IT = t.TypeVar("IT", bound=obj.DBObject)
 
@@ -46,6 +48,12 @@ def inspect(cur) -> obj.Database:
     enums = query(cur, ENUM_QUERY, "enum")  # type: t.List[obj.Enum]
     functions = query(cur, FUNCTION_QUERY, "function")  # type: t.List[obj.Function]
     triggers = query(cur, TRIGGER_QUERY, "trigger")  # type: t.List[obj.Trigger]
+    dependencies = query(cur, DEPENDENCY_QUERY, "dependency")  # type: t.List[obj.Dependency]
+
+    graph = nx.DiGraph()
+    for dep in dependencies:
+        graph.add_edge(dep["dependency_identity"], dep["identity"])
+
     return dict(
         tables=_index_by_id(tables),
         views=_index_by_id(views),
@@ -54,4 +62,5 @@ def inspect(cur) -> obj.Database:
         sequences=_index_by_id(sequences),
         functions=_index_by_id(functions),
         triggers=_index_by_id(triggers),
+        dependencies=graph,
     )

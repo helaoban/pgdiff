@@ -2,6 +2,10 @@ import typing as t
 import typing_extensions as te
 
 
+if t.TYPE_CHECKING:
+    import networkx as nx  # type: ignore
+
+
 Column = t.Tuple[str, str, str, int]
 DatabaseIdDiff = t.Tuple[t.Set[str], t.Set[str], t.Set[str]]
 DBObjectFieldName = t.Union[
@@ -115,6 +119,18 @@ class Trigger(te.TypedDict):
     enabled: bool
 
 
+class Dependency(te.TypedDict):
+    obj_type: te.Literal["dependency"]
+    oid: str
+    schema: str
+    name: str
+    identity: str
+    dependency_oid: str
+    dependency_schema: str
+    dependency_name: str
+    dependency_identity: str
+
+
 class Database(te.TypedDict):
     tables: t.Dict[str, Table]
     views: t.Dict[str, View]
@@ -123,6 +139,7 @@ class Database(te.TypedDict):
     sequences: t.Dict[str, Sequence]
     functions: t.Dict[str, Function]
     triggers: t.Dict[str, Trigger]
+    dependencies: "nx.Graph"
 
 
 DBObject = t.Union[
@@ -133,4 +150,5 @@ DBObject = t.Union[
     Enum,
     Function,
     Trigger,
+    Dependency,
 ]

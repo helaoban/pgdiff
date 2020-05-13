@@ -1,5 +1,6 @@
 import typing as t
 from . import objects as obj
+import networkx as nx  # type: ignore
 
 
 def make_sequence_create(sequence: obj.Sequence) -> str:
@@ -85,6 +86,8 @@ def get_obj_id(obj: obj.DBObject) -> str:
         return "%s.%s" % (obj["schema"], obj["signature"])
     if obj["obj_type"] == "trigger":
         return "%s.%s" % (obj["schema"], obj["name"])
+    if obj["obj_type"] == "dependency":
+        return "%s.%s" % (obj["identity"], obj["dependency_identity"])
     raise ValueError("Invalid obj: %s" % obj)
 
 
@@ -111,3 +114,17 @@ def format_statement(statement: str) -> str:
     if not statement.endswith(";"):
         statement = statement + ";"
     return statement
+
+
+def topo_sort(graph: "nx.DiGraph", items: t.Dict[str, t.List[str]]) -> t.List[str]:
+    rv = []
+    for dep in nx.topological_sort(graph):
+        try:
+            rv.extend(items.pop(dep))
+        except KeyError:
+            pass
+
+    for _, statements in items.items():
+        rv.extend(statements)
+
+    return rv

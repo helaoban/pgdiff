@@ -1,6 +1,8 @@
+from collections import defaultdict
 import os
 import sys
 import typing as t
+import networkx as nx  # type: ignore
 from . import objects as obj, helpers
 
 
@@ -106,22 +108,29 @@ def diff_table(source: obj.Table, target: obj.Table) -> t.Optional[str]:
 
 
 def diff_triggers(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
+    statements_by_id = defaultdict(list)
+
     common, source_unique, target_unique = diff_identifiers(
         set(source["triggers"]), set(target["triggers"]))
+
     for trigger_id in source_unique:
         drop = "DROP TRIGGER %s" % trigger_id
-        rv.append(drop)
+        statements_by_id[trigger_id].append(drop)
+
     for trigger_id in target_unique:
         target_trigger = target["triggers"][trigger_id]
-        rv.append(target_trigger["definition"])
+        create = target_trigger["definition"]
+        statements_by_id[trigger_id].append(create)
+
     for trigger_id in common:
         source_trigger = source["triggers"][trigger_id]
         target_trigger = target["triggers"][trigger_id]
         if source_trigger["definition"] != target_trigger["definition"]:
             drop = "DROP TRIGGER %s" % trigger_id
-            rv.extend([drop, target_trigger["definition"]])
-    return rv
+            create = target_trigger["definition"]
+            statements_by_id[trigger_id].extend([drop, create])
+
+    return helpers.topo_sort(target["dependencies"], statements_by_id)
 
 
 def diff_function(source: obj.Function, target: obj.Function) -> t.Optional[str]:
@@ -132,23 +141,29 @@ def diff_function(source: obj.Function, target: obj.Function) -> t.Optional[str]
 
 
 def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
+    statements_by_id = defaultdict(list)
+
     common, source_unique, target_unique = diff_identifiers(
         set(source["functions"]), set(target["functions"]))
+
     for function_id in source_unique:
         source_function = source["functions"][function_id]
         drop = "DROP FUNCTION %s" % function_id
-        rv.append(drop)
+        statements_by_id[function_id].append(drop)
+
     for function_id in target_unique:
         target_function = target["functions"][function_id]
-        rv.append(target_function["definition"])
+        create = target_function["definition"]
+        statements_by_id[function_id].append(create)
+
     for function_id in common:
         source_function = source["functions"][function_id]
         target_function = target["functions"][function_id]
         diff = diff_function(source_function, target_function)
         if diff:
-            rv.append(diff)
-    return rv
+            statements_by_id[function_id].append(diff)
+
+    return helpers.topo_sort(target["dependencies"], statements_by_id)
 
 
 def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
@@ -226,29 +241,30 @@ def diff_indices(source: obj.Database, target: obj.Database) -> t.List[str]:
 
 
 def diff_views(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
+    statements_by_id = defaultdict(list)
 
     common, source_unique, target_unique = diff_identifiers(
         set(source["views"]), set(target["views"]))
 
     for view_id in source_unique:
-        rv.append("DROP VIEW %s" % view_id)
+        drop = "DROP VIEW %s" % view_id
+        statements_by_id[view_id].append(drop)
 
     for view_id in target_unique:
         target_view = target["views"][view_id]
         statement = (
             "CREATE VIEW %s AS\n" % view_id
         ) + target_view["definition"]
-        rv.append(statement)
+        statements_by_id[view_id].append(statement)
 
     for view_id in common:
         source_view = source["views"][view_id]
         target_view = target["views"][view_id]
         view_diff = diff_view(source_view, target_view)
         if view_diff:
-            rv.append(view_diff)
+            statements_by_id[view_id].append(view_diff)
 
-    return rv
+    return helpers.topo_sort(target["dependencies"], statements_by_id)
 
 
 def diff_tables(source: obj.Database, target: obj.Database) -> t.List[str]:
