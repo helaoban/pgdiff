@@ -60,12 +60,14 @@ def make_table_create(table: obj.Table) -> str:
     return rv
 
 def make_column(column: obj.Column) -> str:
-    name, type, default, notnull = column
+    name, type, default, is_notnull = column
+    notnull = " NOT NULL" if is_notnull else ""
     default_key = " DEFAULT" if default != "NULL" else ""
     default_val = " %s" % default if default != "NULL" else ""
-    return "{name} {type}{default_key}{default_val}".format(
+    return "{name} {type}{notnull}{default_key}{default_val}".format(
         name=name,
         type=type,
+        notnull=notnull,
         default_key=default_key,
         default_val=default_val,
     )
