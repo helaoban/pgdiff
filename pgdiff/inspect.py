@@ -2,6 +2,8 @@ import os
 import typing as t
 import networkx as nx  # type: ignore
 from . import objects as obj, helpers
+from .diff import diff, create, drop
+
 
 SQL_DIR = os.path.normpath(
     os.path.join(
@@ -40,7 +42,52 @@ def _index_by_id(items: t.List[IT]) -> t.Dict[str, IT]:
     return rv
 
 
-def inspect(cur) -> obj.Database:
+class Inspection:
+
+    def __init__(
+        self,
+        objects: t.Dict[str, obj.DBObject],
+        dependencies: t.List[obj.Dependency],
+    ):
+
+        graph = nx.DiGraph()
+        for obj_id in objects:
+            graph.add_node(obj_id)
+        for dep in dependencies:
+            graph.add_edge(dep["dependency_identity"], dep["identity"])
+
+        self.graph = graph
+        self.objects = objects
+
+    def __getitem__(self, obj_id: str) -> obj.DBObject:
+        return self.objects[obj_id]
+
+    def __contains__(self, obj_id: str) -> bool:
+        return obj_id in self.objects
+
+    def diff(self, other: "Inspection") -> t.List[str]:
+        rv = []
+        for obj_id in nx.topological_sort(self.graph):
+            try:
+                obj = self[obj_id]
+            except KeyError:
+                print(self.objects.keys())
+                raise
+
+            try:
+                other_obj = other[obj_id]
+            except KeyError:
+                statement = create(obj)
+                if statement:
+                    rv.append(helpers.format_statement(statement))
+            else:
+                for s in diff(other_obj, obj):
+                    rv.append(helpers.format_statement(s))
+
+        return rv
+
+
+def inspect(cur) -> Inspection:
     tables = query(cur, TABLE_QUERY, "table")  # type: t.List[obj.Table]
     views = query(cur, VIEW_QUERY, "view")  # type: t.List[obj.View]
     indices = query(cur, INDEX_QUERY, "index")  # type: t.List[obj.Index]
@@ -50,17 +97,17 @@ def inspect(cur) -> obj.Database:
     triggers = query(cur, TRIGGER_QUERY, "trigger")  # type: t.List[obj.Trigger]
     dependencies = query(cur, DEPENDENCY_QUERY, "dependency")  # type: t.List[obj.Dependency]
 
-    graph = nx.DiGraph()
-    for dep in dependencies:
-        graph.add_edge(dep["dependency_identity"], dep["identity"])
+    objects: t.List[obj.DBObject] = [
+        *tables,
+        *views,
+        *indices,
+        *sequences,
+        *enums,
+        *functions,
+        *triggers
+    ]
 
-    return dict(
-        tables=_index_by_id(tables),
-        views=_index_by_id(views),
-        indices=_index_by_id(indices),
-        enums=_index_by_id(enums),
-        sequences=_index_by_id(sequences),
-        functions=_index_by_id(functions),
-        triggers=_index_by_id(triggers),
-        dependencies=graph,
+    return Inspection(
+        objects=_index_by_id(objects),
+        dependencies=dependencies,
     )

@@ -6,6 +6,32 @@ import networkx as nx  # type: ignore
 from . import objects as obj, helpers
 
 
+diff_handlers = {}
+create_handlers = {}
+drop_handlers = {}
+
+
+def register_diff(type: str):
+    def wrapped(func):
+        diff_handlers[type] = func
+        return func
+    return wrapped
+
+
+def register_create(type: str):
+    def wrapped(func):
+        create_handlers[type] = func
+        return func
+    return wrapped
+
+
+def register_drop(type: str):
+    def wrapped(func):
+        drop_handlers[type] = func
+        return func
+    return wrapped
+
+
 def diff_identifiers(
     source: t.Set[str],
     target: t.Set[str],
@@ -14,18 +40,6 @@ def diff_identifiers(
     unique_to_source = source - target
     unique_to_target = target - source
     return common, unique_to_source, unique_to_target
-
-
-def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
-    return []
-
-
-def diff_view(source: obj.View, target: obj.View) -> t.Optional[str]:
-    if source["definition"] != target["definition"]:
-        return (
-            "CREATE OR REPLACE VIEW %s AS\n" % helpers.get_obj_id(target)
-        ) + target["definition"]
-    return None
 
 
 def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
@@ -73,6 +87,17 @@ def diff_columns(source: obj.Table, target: obj.Table) -> t.List[str]:
     return rv
 
 
+def diff_constraint(source, target) -> t.List[str]:
+    rv = []
+    constraint_name, source_definition = source
+    _, target_definition = target
+    if source_definition != target_definition:
+        drop = "DROP CONSTRAINT %s" % constraint_name
+        add = "ADD %s %s" % (constraint_name, target_definition)
+        rv.extend([drop, add])
+    return rv
+
+
 def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
@@ -85,87 +110,60 @@ def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
         add = "ADD %s %s" % (constraint_name, definition)
         rv.append(add)
     for constraint_name in common:
-        _, source_definition = helpers.get_constraint(source, constraint_name)
-        _, target_definition = helpers.get_constraint(target, constraint_name)
-        if source_definition != target_definition:
-            drop = "DROP CONSTRAINT %s" % constraint_name
-            add = "ADD %s %s" % (constraint_name, target_definition)
-            rv.extend([drop, add])
+        source_constraint = helpers.get_constraint(source, constraint_name)
+        target_constraint = helpers.get_constraint(target, constraint_name)
+        rv.extend(diff_constraint(source_constraint, target_constraint))
     return rv
 
 
-def diff_table(source: obj.Table, target: obj.Table) -> t.Optional[str]:
+@register_diff("table")
+def diff_table(source: obj.Table, target: obj.Table) -> t.List[str]:
     alterations = []
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
     if alterations:
         table_id = helpers.get_obj_id(target)
-        return "ALTER TABLE {name} {alterations}".format(
+        statement = "ALTER TABLE {name} {alterations}".format(
             name=table_id,
-            alterations=" ".join(alterations),
+            alterations=", ".join(alterations),
         )
-    return None
+        return [statement]
+    return []
 
 
-def diff_triggers(source: obj.Database, target: obj.Database) -> t.List[str]:
-    statements_by_id = defaultdict(list)
-
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["triggers"]), set(target["triggers"]))
-
-    for trigger_id in source_unique:
-        drop = "DROP TRIGGER %s" % trigger_id
-        statements_by_id[trigger_id].append(drop)
-
-    for trigger_id in target_unique:
-        target_trigger = target["triggers"][trigger_id]
-        create = target_trigger["definition"]
-        statements_by_id[trigger_id].append(create)
-
-    for trigger_id in common:
-        source_trigger = source["triggers"][trigger_id]
-        target_trigger = target["triggers"][trigger_id]
-        if source_trigger["definition"] != target_trigger["definition"]:
-            drop = "DROP TRIGGER %s" % trigger_id
-            create = target_trigger["definition"]
-            statements_by_id[trigger_id].extend([drop, create])
-
-    return helpers.topo_sort(target["dependencies"], statements_by_id)
+@register_diff("view")
+def diff_view(source: obj.View, target: obj.View) -> t.List[str]:
+    if source["definition"] != target["definition"]:
+        statement = (
+            "CREATE OR REPLACE VIEW %s AS\n" % helpers.get_obj_id(target)
+        ) + target["definition"]
+        return [statement]
+    return []
 
 
-def diff_function(source: obj.Function, target: obj.Function) -> t.Optional[str]:
+@register_diff("index")
+def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
+    return []
+
+
+@register_diff("function")
+def diff_function(source: obj.Function, target: obj.Function) -> t.List[str]:
     if source["definition"] != target["definition"]:
         # TODO definition needs to be CREATE OR REPLACE
-        return target["definition"]
-    return None
+        return [target["definition"]]
+    return []
 
 
-def diff_functions(source: obj.Database, target: obj.Database) -> t.List[str]:
-    statements_by_id = defaultdict(list)
-
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["functions"]), set(target["functions"]))
-
-    for function_id in source_unique:
-        source_function = source["functions"][function_id]
-        drop = "DROP FUNCTION %s" % function_id
-        statements_by_id[function_id].append(drop)
-
-    for function_id in target_unique:
-        target_function = target["functions"][function_id]
-        create = target_function["definition"]
-        statements_by_id[function_id].append(create)
-
-    for function_id in common:
-        source_function = source["functions"][function_id]
-        target_function = target["functions"][function_id]
-        diff = diff_function(source_function, target_function)
-        if diff:
-            statements_by_id[function_id].append(diff)
-
-    return helpers.topo_sort(target["dependencies"], statements_by_id)
+@register_diff("trigger")
+def diff_trigger(source: obj.Trigger, target: obj.Trigger) -> t.List[str]:
+    if source["definition"] != target["definition"]:
+        drop = "DROP TRIGGER %s" % helpers.get_obj_id(source)
+        create = target["definition"]
+        return [drop, create]
+    return []
 
 
+@register_diff("enum")
 def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
@@ -185,122 +183,93 @@ def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
     return rv
 
 
-def diff_enums(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["enums"]), set(target["enums"]))
-    for enum_id in source_unique:
-        rv.append("DROP TYPE %s" % enum_id)
-    for enum_id in target_unique:
-        target_enum = target["enums"][enum_id]
-        rv.append(helpers.make_enum_create(target_enum))
-    for enum_id in common:
-        source_enum = source["enums"][enum_id]
-        target_enum = target["enums"][enum_id]
-        rv.extend(diff_enum(source_enum, target_enum))
-    return rv
+@register_drop("trigger")
+def drop_trigger(trigger: obj.Trigger) -> str:
+    return "DROP TRIGGER %s" % helpers.get_obj_id(trigger)
 
 
-def diff_sequences(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv =  []
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["sequences"]), set(target["sequences"]))
-
-    for sequence_id in source_unique:
-        rv.append("DROP SEQUENCE %s" % sequence_id)
-
-    for sequence_id in target_unique:
-        target_sequence = target["sequences"][sequence_id]
-        rv.append(helpers.make_sequence_create(target_sequence))
-
-    return rv
+@register_create("trigger")
+def create_trigger(trigger: obj.Trigger) -> str:
+    return trigger["definition"]
 
 
-def diff_indices(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
-
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["indices"]), set(target["indices"]))
-
-    for index_id in source_unique:
-        rv.append("DROP INDEX %s" % index_id)
-
-    for index_id in target_unique:
-        target_index = target["indices"][index_id]
-        if not target_index["is_unique"] and not target_index["is_pk"]:
-            rv.append(target_index["definition"])
-
-    for index_id in common:
-        source_index = source["indices"][index_id]
-        target_index = target["indices"][index_id]
-        index_diff = diff_index(source_index, target_index)
-        if index_diff:
-            rv.extend(index_diff)
-
-    return rv
+@register_drop("function")
+def drop_function(function: obj.Function) -> str:
+    return "DROP FUNCTION %s" % helpers.get_obj_id(function)
 
 
-def diff_views(source: obj.Database, target: obj.Database) -> t.List[str]:
-    statements_by_id = defaultdict(list)
-
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["views"]), set(target["views"]))
-
-    for view_id in source_unique:
-        drop = "DROP VIEW %s" % view_id
-        statements_by_id[view_id].append(drop)
-
-    for view_id in target_unique:
-        target_view = target["views"][view_id]
-        statement = (
-            "CREATE VIEW %s AS\n" % view_id
-        ) + target_view["definition"]
-        statements_by_id[view_id].append(statement)
-
-    for view_id in common:
-        source_view = source["views"][view_id]
-        target_view = target["views"][view_id]
-        view_diff = diff_view(source_view, target_view)
-        if view_diff:
-            statements_by_id[view_id].append(view_diff)
-
-    return helpers.topo_sort(target["dependencies"], statements_by_id)
+@register_create("function")
+def create_function(function: obj.Trigger) -> str:
+    return function["definition"]
 
 
-def diff_tables(source: obj.Database, target: obj.Database) -> t.List[str]:
-    rv = []
-
-    common, source_unique, target_unique = diff_identifiers(
-        set(source["tables"]), set(target["tables"]))
-
-    for table_id in source_unique:
-        rv.append("DROP TABLE %s" % table_id)
-
-    for table_id in target_unique:
-        target_table = target["tables"][table_id]
-        rv.append(helpers.make_table_create(target_table))
-
-    for table_id in common:
-        source_table = source["tables"][table_id]
-        target_table = target["tables"][table_id]
-        table_diff = diff_table(source_table, target_table)
-        if table_diff:
-            rv.append(table_diff)
-
-    return rv
+@register_drop("enum")
+def drop_enum(enum: obj.Enum) -> str:
+    return "DROP TYPE %s" % helpers.get_obj_id(enum)
 
 
-def diff(source: obj.Database, target: obj.Database) -> t.List[str]:
-    statements = []
-    statements.extend(diff_enums(source, target))
-    statements.extend(diff_sequences(source, target))
-    statements.extend(diff_tables(source, target))
-    statements.extend(diff_views(source, target))
-    statements.extend(diff_indices(source, target))
-    statements.extend(diff_functions(source, target))
-    statements.extend(diff_triggers(source, target))
+@register_create("enum")
+def create_enum(enum: obj.Enum) -> str:
+    return helpers.make_enum_create(enum)
 
-    rv = []
-    for s in statements:
-        rv.append(helpers.format_statement(s))
-    return rv
+
+@register_drop("sequence")
+def drop_sequence(sequence: obj.Sequence) -> str:
+    return "DROP SEQUENCE %s" % helpers.get_obj_id(sequence)
+
+
+@register_create("sequence")
+def create_sequence(sequence: obj.Sequence) -> str:
+    return helpers.make_sequence_create(sequence)
+
+
+@register_drop("index")
+def drop_index(index: obj.Index) -> str:
+    return "DROP INDEX %s" % helpers.get_obj_id(index)
+
+
+@register_create("index")
+def create_index(index: obj.Index) -> str:
+    if not index["is_unique"] and not index["is_pk"]:
+        return index["definition"]
+    return ""
+
+
+@register_drop("view")
+def drop_view(view: obj.View) -> str:
+    return "DROP VIEW %s" % helpers.get_obj_id(view)
+
+
+@register_create("view")
+def create_view(view: obj.View) -> str:
+    return (
+        "CREATE VIEW %s AS\n" % helpers.get_obj_id(view)
+    ) + view["definition"]
+
+
+@register_drop("table")
+def drop_table(table: obj.Table) -> str:
+    return "DROP TABLE %s" % helpers.get_obj_id(table)
+
+
+@register_create("table")
+def create_table(table: obj.Table) -> str:
+    return helpers.make_table_create(table)
+
+
+def diff(source: obj.DBObject, target: obj.DBObject) -> t.List[str]:
+    try:
+        handler = diff_handlers[source["obj_type"]]
+    except KeyError:
+        return []
+    return handler(source, target)
+
+
+def create(obj: obj.DBObject) -> str:
+    handler = create_handlers[obj["obj_type"]]
+    return handler(obj)
+
+
+def drop(obj: obj.DBObject) -> str:
+    handler = drop_handlers[obj["obj_type"]]
+    return handler(obj)

@@ -1,4 +1,5 @@
 import contextlib
+import sys
 from .diff import diff
 from .inspect import inspect
 from .utils import temp_db, quick_cursor
@@ -16,6 +17,8 @@ def sync(schema: str, dsn: str):
             target.execute(schema)
             target_schema = inspect(target)
             current_schema = inspect(current)
-            statements = diff(current_schema, target_schema)
-            script = "\n\n".join(statements)
-            print(script)
+            statements = target_schema.diff(current_schema)
+            if statements:
+                script = "SET check_function_bodies = false;\n\n"
+                script += "BEGIN;\n\n%s\n\nCOMMIT;" % "\n\n".join(statements)
+                sys.stdout.write(script)
