@@ -18,7 +18,7 @@ VIEW_QUERY = os.path.join(SQL_DIR, "views.sql")
 INDEX_QUERY = os.path.join(SQL_DIR, "indices.sql")
 SEQUENCE_QUERY = os.path.join(SQL_DIR, "sequences.sql")
 ENUM_QUERY = os.path.join(SQL_DIR, "enums.sql")
-FUNCTION_QUERY = os.path.join(SQL_DIR, "functions2.sql")
+FUNCTION_QUERY = os.path.join(SQL_DIR, "functions.sql")
 TRIGGER_QUERY = os.path.join(SQL_DIR, "triggers.sql")
 DEPENDENCY_QUERY = os.path.join(SQL_DIR, "dependencies.sql")
 
