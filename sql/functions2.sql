@@ -8,7 +8,11 @@ SELECT
     pp.oid AS oid,
     n.nspname AS schema,
     pp.proname AS name,
-    pp.oid::regprocedure::text AS signature,
+    format(
+        '%I(%s)',
+        pp.proname,
+        pg_get_function_identity_arguments(pp.oid)
+    ) AS signature,
     pl.lanname AS language,
     pp.proisstrict AS is_strict,
     pp.prosecdef AS is_security_definer,
