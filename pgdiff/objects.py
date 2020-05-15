@@ -122,12 +122,8 @@ class Trigger(te.TypedDict):
 class Dependency(te.TypedDict):
     obj_type: te.Literal["dependency"]
     oid: str
-    schema: str
-    name: str
     identity: str
     dependency_oid: str
-    dependency_schema: str
-    dependency_name: str
     dependency_identity: str
 
 
