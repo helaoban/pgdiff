@@ -6,6 +6,8 @@ import urllib.parse
 
 from psycopg2 import connect as db_connect, sql  # type: ignore
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore
+from psycopg2.errors import InsufficientPrivilege  # type: ignore
+from time import sleep
 
 
 KILL_CONN = """
@@ -233,7 +235,17 @@ def kill_other_connections(conn, db_name: str):
         sql.SQL("REVOKE CONNECT ON DATABASE {} FROM public").format(
             sql.Identifier(db_name))
     )
-    cur.execute(KILL_CONN, (db_name, ))
+    tries = 5
+    for tri in range(1, tries + 1):
+        try:
+            cur.execute(KILL_CONN, (db_name, ))
+        except InsufficientPrivilege:
+            if tri == tries:
+                raise
+            sleep(0.1)
+            continue
+        else:
+            break
 
 
 def create_database(dsn, template: str = ""):
