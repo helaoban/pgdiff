@@ -1,8 +1,10 @@
 import random
 import string
+import typing as t
 import contextlib
 import os
 import urllib.parse
+from copy import copy
 
 from psycopg2 import connect as db_connect, sql  # type: ignore
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore
@@ -39,17 +41,6 @@ class DBConnParams:
             f"@{self.host}:{self.port}"
             f"/{self.database}"
         )
-
-    def replace(self, **changes) -> "DBConnParams":
-        kw = {
-            "username": self.username,
-            "password": self.password,
-            "host": self.host,
-            "port": self.port,
-            "database": self.database,
-            **changes,
-        }
-        return DBConnParams(**kw);
 
 
 def _validate_port_spec(hosts, port):
@@ -225,7 +216,8 @@ def get_raw_connection(dsn: str):
 
 
 def admin_connect(dsn):
-    params = parse_db_dsn(dsn).replace(database="postgres")
+    params = copy(parse_db_dsn(dsn))
+    params.database = "postgres"
     return get_raw_connection(params.to_dsn())
 
 
@@ -284,17 +276,17 @@ def drop_database(dsn):
 
 @contextlib.contextmanager
 def temp_db(dsn: str, template: str = "", quiet: bool = True):
-    params = parse_db_dsn(dsn)
-    tempname = _temporary_name()
-    temp_db_dsn = params.replace(database=tempname).to_dsn()
+    params = copy(parse_db_dsn(dsn))
+    params.database = _temporary_name()
+    temp_db_dsn = params.to_dsn()
     if not quiet:
-        print(f"Creating temporary database {tempname}.")
+        print(f"Creating temporary database {params.database}.")
     create_database(temp_db_dsn, template=template)
     try:
         yield temp_db_dsn
     finally:
         if not quiet:
-            print(f"Dropping temporary database {tempname}.")
+            print(f"Dropping temporary database {params.database}.")
         drop_database(temp_db_dsn)
 
 
