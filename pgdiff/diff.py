@@ -117,7 +117,7 @@ def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
 
 
 @register_diff("table")
-def diff_table(source: obj.Table, target: obj.Table) -> t.List[str]:
+def diff_table(ctx: dict, source: obj.Table, target: obj.Table) -> t.List[str]:
     alterations = []
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
@@ -132,7 +132,11 @@ def diff_table(source: obj.Table, target: obj.Table) -> t.List[str]:
 
 
 @register_diff("view")
-def diff_view(source: obj.View, target: obj.View) -> t.List[str]:
+def diff_view(
+    ctx: dict,
+    source: obj.View,
+    target: obj.View
+) -> t.List[str]:
     if source["definition"] != target["definition"]:
         statement = (
             "CREATE OR REPLACE VIEW %s AS\n" % helpers.get_obj_id(target)
@@ -142,12 +146,20 @@ def diff_view(source: obj.View, target: obj.View) -> t.List[str]:
 
 
 @register_diff("index")
-def diff_index(source: obj.Index, target: obj.Index) -> t.List[str]:
+def diff_index(
+    ctx: dict,
+    source: obj.Index,
+    target: obj.Index
+) -> t.List[str]:
     return []
 
 
 @register_diff("function")
-def diff_function(source: obj.Function, target: obj.Function) -> t.List[str]:
+def diff_function(
+    ctx: dict,
+    source: obj.Function,
+    target: obj.Function
+) -> t.List[str]:
     if source["definition"] != target["definition"]:
         # TODO definition needs to be CREATE OR REPLACE
         return [target["definition"]]
@@ -155,7 +167,11 @@ def diff_function(source: obj.Function, target: obj.Function) -> t.List[str]:
 
 
 @register_diff("trigger")
-def diff_trigger(source: obj.Trigger, target: obj.Trigger) -> t.List[str]:
+def diff_trigger(
+    ctx: dict,
+    source: obj.Trigger,
+    target: obj.Trigger
+) -> t.List[str]:
     if source["definition"] != target["definition"]:
         drop = "DROP TRIGGER %s" % helpers.get_obj_id(source)
         create = target["definition"]
@@ -164,7 +180,7 @@ def diff_trigger(source: obj.Trigger, target: obj.Trigger) -> t.List[str]:
 
 
 @register_diff("enum")
-def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
+def diff_enum(ctx: dict, source: obj.Enum, target: obj.Enum) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
         set(source["elements"]), set(target["elements"]))
@@ -184,92 +200,102 @@ def diff_enum(source: obj.Enum, target: obj.Enum) -> t.List[str]:
 
 
 @register_drop("trigger")
-def drop_trigger(trigger: obj.Trigger) -> str:
+def drop_trigger(ctx: dict, trigger: obj.Trigger) -> str:
     return "DROP TRIGGER %s" % helpers.get_obj_id(trigger)
 
 
 @register_create("trigger")
-def create_trigger(trigger: obj.Trigger) -> str:
+def create_trigger(ctx: dict, trigger: obj.Trigger) -> str:
     return trigger["definition"]
 
 
 @register_drop("function")
-def drop_function(function: obj.Function) -> str:
+def drop_function(ctx: dict, function: obj.Function) -> str:
     return "DROP FUNCTION %s" % helpers.get_obj_id(function)
 
 
 @register_create("function")
-def create_function(function: obj.Trigger) -> str:
+def create_function(ctx: dict, function: obj.Trigger) -> str:
     return function["definition"]
 
 
 @register_drop("enum")
-def drop_enum(enum: obj.Enum) -> str:
+def drop_enum(ctx: dict, enum: obj.Enum) -> str:
     return "DROP TYPE %s" % helpers.get_obj_id(enum)
 
 
 @register_create("enum")
-def create_enum(enum: obj.Enum) -> str:
+def create_enum(ctx: dict, enum: obj.Enum) -> str:
     return helpers.make_enum_create(enum)
 
 
 @register_drop("sequence")
-def drop_sequence(sequence: obj.Sequence) -> str:
+def drop_sequence(ctx: dict, sequence: obj.Sequence) -> str:
     return "DROP SEQUENCE %s" % helpers.get_obj_id(sequence)
 
 
 @register_create("sequence")
-def create_sequence(sequence: obj.Sequence) -> str:
+def create_sequence(ctx: dict, sequence: obj.Sequence) -> str:
     return helpers.make_sequence_create(sequence)
 
 
 @register_drop("index")
-def drop_index(index: obj.Index) -> str:
+def drop_index(ctx: dict, index: obj.Index) -> str:
     return "DROP INDEX %s" % helpers.get_obj_id(index)
 
 
 @register_create("index")
-def create_index(index: obj.Index) -> str:
+def create_index(ctx: dict, index: obj.Index) -> str:
     if not index["is_unique"] and not index["is_pk"]:
         return index["definition"]
     return ""
 
 
 @register_drop("view")
-def drop_view(view: obj.View) -> str:
+def drop_view(ctx: dict, view: obj.View) -> str:
     return "DROP VIEW %s" % helpers.get_obj_id(view)
 
 
 @register_create("view")
-def create_view(view: obj.View) -> str:
+def create_view(ctx: dict, view: obj.View) -> str:
     return (
         "CREATE VIEW %s AS\n" % helpers.get_obj_id(view)
     ) + view["definition"]
 
 
 @register_drop("table")
-def drop_table(table: obj.Table) -> str:
+def drop_table(ctx: dict, table: obj.Table) -> str:
     return "DROP TABLE %s" % helpers.get_obj_id(table)
 
 
 @register_create("table")
-def create_table(table: obj.Table) -> str:
+def create_table(ctx: dict, table: obj.Table) -> str:
     return helpers.make_table_create(table)
 
 
-def diff(source: obj.DBObject, target: obj.DBObject) -> t.List[str]:
+def diff(
+    ctx: dict,
+    source: obj.DBObject,
+    target: obj.DBObject
+) -> t.List[str]:
     try:
         handler = diff_handlers[source["obj_type"]]
     except KeyError:
         return []
-    return handler(source, target)
+    return handler(ctx, source, target)
 
 
-def create(obj: obj.DBObject) -> str:
+def create(
+    ctx: dict,
+    obj: obj.DBObject
+) -> str:
     handler = create_handlers[obj["obj_type"]]
-    return handler(obj)
+    return handler(ctx, obj)
 
 
-def drop(obj: obj.DBObject) -> str:
+def drop(
+    ctx: dict,
+    obj: obj.DBObject
+) -> str:
     handler = drop_handlers[obj["obj_type"]]
-    return handler(obj)
+    return handler(ctx, obj)
