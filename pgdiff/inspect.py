@@ -40,9 +40,11 @@ class Inspection:
         self,
         objects: t.Dict[str, obj.DBObject],
         dependencies: t.List[obj.Dependency],
+        ctx: dict,
     ) -> None:
         self.graph = _make_graph(objects, dependencies)
         self.objects = objects
+        self.ctx = ctx
 
     def __getitem__(self, obj_id: str) -> obj.DBObject:
         return self.objects[obj_id]
@@ -52,23 +54,24 @@ class Inspection:
 
     def diff(self, other: "Inspection") -> t.List[str]:
         rv = []
+        ctx: dict = {"inspection": self, **self.ctx}
 
         for obj_id in nx.topological_sort(self.graph):
             obj = self[obj_id]
             try:
                 other_obj = other[obj_id]
             except KeyError:
-                statement = create(obj)
+                statement = create(ctx, obj)
                 if statement:
                     rv.append(helpers.format_statement(statement))
             else:
-                for s in diff(other_obj, obj):
+                for s in diff(ctx, other_obj, obj):
                     rv.append(helpers.format_statement(s))
 
         for obj_id in reversed(list(nx.topological_sort(other.graph))):
             if obj_id not in self:
                 other_obj = other[obj_id]
-                statement = drop(other_obj)
+                statement = drop(ctx, other_obj)
                 rv.append(helpers.format_statement(statement))
 
         return rv
@@ -86,6 +89,7 @@ def _filter_objects(
 
 
 def inspect(cursor, include: t.Optional[t.Iterable[str]] = None) -> Inspection:
+    pg_version = cursor.connection.server_version
     objects = helpers.query_objects(cursor)
     if include is not None:
         objects = _filter_objects(objects, include)
@@ -93,4 +97,5 @@ def inspect(cursor, include: t.Optional[t.Iterable[str]] = None) -> Inspection:
     return Inspection(
         objects=_index_by_id(objects),
         dependencies=dependencies,
+        ctx={"pg_version": pg_version},
     )
