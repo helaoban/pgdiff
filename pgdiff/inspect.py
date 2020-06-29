@@ -65,7 +65,7 @@ class Inspection:
                 for s in diff(other_obj, obj):
                     rv.append(helpers.format_statement(s))
 
-        for obj_id in nx.topological_sort(other.graph):
+        for obj_id in reversed(list(nx.topological_sort(other.graph))):
             if obj_id not in self:
                 other_obj = other[obj_id]
                 statement = drop(other_obj)
