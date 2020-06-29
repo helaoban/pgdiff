@@ -227,7 +227,7 @@ WITH extensions AS (
         i.indexrelid as oid,
 		format('%I.%I', n.nspname, c.relname) AS identity,
         i.indrelid as dependency_oid,
-		format('%I.%I', dn.nspname, deps.relname) AS identity
+		format('%I.%I', dn.nspname, deps.relname) AS dependency_identity
     FROM pg_index i
     INNER JOIN pg_class c ON c.oid = i.indexrelid
     INNER JOIN pg_namespace n ON n.oid = c.relnamespace
