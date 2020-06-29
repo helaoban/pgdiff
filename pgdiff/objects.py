@@ -8,15 +8,6 @@ if t.TYPE_CHECKING:
 
 Column = t.Tuple[str, str, str, int]
 DatabaseIdDiff = t.Tuple[t.Set[str], t.Set[str], t.Set[str]]
-DBObjectFieldName = t.Union[
-    te.Literal["tables"],
-    te.Literal["views"],
-    te.Literal["indices"],
-    te.Literal["enums"],
-    te.Literal["sequences"],
-    te.Literal["functions"],
-]
-DatabaseDiff = t.Dict[DBObjectFieldName, DatabaseIdDiff]
 Constraint = t.Tuple[str, str]
 
 
