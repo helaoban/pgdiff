@@ -68,12 +68,7 @@ class Inspection:
     def diff(self, other: "Inspection") -> t.List[str]:
         rv = []
         for obj_id in nx.topological_sort(self.graph):
-            try:
-                obj = self[obj_id]
-            except KeyError:
-                print(self.objects.keys())
-                raise
-
+            obj = self[obj_id]
             try:
                 other_obj = other[obj_id]
             except KeyError:
@@ -83,7 +78,6 @@ class Inspection:
             else:
                 for s in diff(other_obj, obj):
                     rv.append(helpers.format_statement(s))
-
         return rv
 
 
