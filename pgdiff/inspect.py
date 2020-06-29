@@ -53,12 +53,6 @@ class Inspection:
     def diff(self, other: "Inspection") -> t.List[str]:
         rv = []
 
-        for obj_id in nx.topological_sort(other.graph):
-            if obj_id not in self:
-                other_obj = other[obj_id]
-                statement = drop(other_obj)
-                rv.append(helpers.format_statement(statement))
-
         for obj_id in nx.topological_sort(self.graph):
             obj = self[obj_id]
             try:
@@ -70,6 +64,13 @@ class Inspection:
             else:
                 for s in diff(other_obj, obj):
                     rv.append(helpers.format_statement(s))
+
+        for obj_id in nx.topological_sort(other.graph):
+            if obj_id not in self:
+                other_obj = other[obj_id]
+                statement = drop(other_obj)
+                rv.append(helpers.format_statement(statement))
+
         return rv
 
 
