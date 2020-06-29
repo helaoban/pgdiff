@@ -127,17 +127,6 @@ class Dependency(te.TypedDict):
     dependency_identity: str
 
 
-class Database(te.TypedDict):
-    tables: t.Dict[str, Table]
-    views: t.Dict[str, View]
-    indices: t.Dict[str, Index]
-    enums: t.Dict[str, Enum]
-    sequences: t.Dict[str, Sequence]
-    functions: t.Dict[str, Function]
-    triggers: t.Dict[str, Trigger]
-    dependencies: "nx.Graph"
-
-
 DBObject = t.Union[
     Table,
     View,
