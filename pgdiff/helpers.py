@@ -1,6 +1,91 @@
+import os
 import typing as t
-from . import objects as obj
+import typing_extensions as te
+
 import networkx as nx  # type: ignore
+
+from . import objects as obj
+
+
+if t.TYPE_CHECKING:
+    DBObjectType = t.Union[
+        te.Literal["table"],
+        te.Literal["view"],
+        te.Literal["index"],
+        te.Literal["sequence"],
+        te.Literal["enum"],
+        te.Literal["function"],
+        te.Literal["trigger"],
+        te.Literal["dependency"],
+    ]
+
+    DBObjectList= t.Union[
+        t.List[obj.Table],
+        t.List[obj.View],
+        t.List[obj.Index],
+        t.List[obj.Sequence],
+        t.List[obj.Enum],
+        t.List[obj.Function],
+        t.List[obj.Trigger],
+        t.List[obj.Dependency],
+    ]
+
+
+SQL_DIR = os.path.normpath(
+    os.path.join(
+        os.path.dirname(__file__),
+        os.pardir,
+        "sql",
+    )
+)
+
+TABLE_QUERY = os.path.join(SQL_DIR, "tables.sql")
+VIEW_QUERY = os.path.join(SQL_DIR, "views.sql")
+INDEX_QUERY = os.path.join(SQL_DIR, "indices.sql")
+SEQUENCE_QUERY = os.path.join(SQL_DIR, "sequences.sql")
+ENUM_QUERY = os.path.join(SQL_DIR, "enums.sql")
+FUNCTION_QUERY = os.path.join(SQL_DIR, "functions.sql")
+TRIGGER_QUERY = os.path.join(SQL_DIR, "triggers.sql")
+DEPENDENCY_QUERY = os.path.join(SQL_DIR, "dependencies.sql")
+
+queries: "t.Dict[DBObjectType, str]" = {
+    "table": TABLE_QUERY,
+    "view": VIEW_QUERY,
+    "index": INDEX_QUERY,
+    "sequence": SEQUENCE_QUERY,
+    "enum": ENUM_QUERY,
+    "function": FUNCTION_QUERY,
+    "trigger": TRIGGER_QUERY,
+    "dependency": DEPENDENCY_QUERY,
+}
+
+
+@te.overload
+def query(cursor, obj_type: te.Literal["table"]) -> t.List[obj.Table]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["view"]) -> t.List[obj.View]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["index"]) -> t.List[obj.Index]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["sequence"]) -> t.List[obj.Sequence]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["enum"]) -> t.List[obj.Enum]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["function"]) -> t.List[obj.Function]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["trigger"]) -> t.List[obj.Trigger]: ...
+@te.overload
+def query(cursor, obj_type: te.Literal["dependency"]) -> t.List[obj.Dependency]: ...
+def query(cursor, obj_type: "DBObjectType") -> "DBObjectList":
+    q = queries[obj_type]
+    with open(q, "r") as f:
+        sql = f.read()
+    cursor.execute(sql)
+    results = []
+    for record in cursor:
+        result = dict(**{"obj_type": obj_type, **record})
+        results.append(result)
+    return results  # type: ignore
 
 
 def make_sequence_create(sequence: obj.Sequence) -> str:
@@ -35,8 +120,10 @@ def make_enum_create(enum: obj.Enum) -> str:
         ", ".join("'%s'" % e for e in enum["elements"])
     )
 
+
 def make_constraint(constraint: obj.Constraint) -> str:
     return "CONSTRAINT %s %s" % constraint
+
 
 def make_table_create(table: obj.Table) -> str:
     column_statements = []
