@@ -3,13 +3,13 @@ import click
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 @cli.command()
-@click.argument("dsn")
+@click.argument("dsn", type=str)
 @click.option("--schemas", "-s", type=str, default="")
-def sync(dsn, schemas: str):
+def sync(dsn: str, schemas: str) -> None:
     """Sync database @ [dsn] with schema."""
     from .sync import sync as do_sync
     schema = sys.stdin.read()

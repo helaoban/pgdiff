@@ -10,7 +10,7 @@ from psycopg2 import connect as db_connect  # type: ignore
 from psycopg2.extras import RealDictCursor  # type: ignore
 
 
-def sync(schema: str, dsn: str, schemas: t.Optional[t.List[str]] = None):
+def sync(schema: str, dsn: str, schemas: t.Optional[t.List[str]] = None) -> None:
     with temp_db(dsn) as temp_db_dsn:
         with contextlib.ExitStack() as stack:
             target = stack.enter_context(quick_cursor(temp_db_dsn, RealDictCursor))
