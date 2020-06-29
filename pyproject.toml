@@ -17,7 +17,7 @@ networkx = "^2.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.2"
-mypy = "^0.770"
+mypy = ">=0.770"
 
 [tool.poetry.scripts]
 pgdiff = "pgdiff.cli:cli"
