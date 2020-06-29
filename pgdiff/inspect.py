@@ -10,7 +10,7 @@ from .diff import diff, create, drop
 IT = t.TypeVar("IT", bound=obj.DBObject)
 
 
-def _index_by_id(items: t.List[IT]) -> t.Dict[str, IT]:
+def _index_by_id(items: t.Iterable[IT]) -> t.Dict[str, IT]:
     rv = {}
     for x in items:
         rv[helpers.get_obj_id(x)] = x
@@ -74,27 +74,14 @@ class Inspection:
         return rv
 
 
-def _get_objects(cursor) -> "t.List[obj.DBObject]":
-    obj_types: "t.List[helpers.DBObjectType]" = [
-        "table",
-        "view",
-        "index",
-        "sequence",
-        "enum",
-        "function",
-        "trigger",
-    ]
-    rv: "t.List[obj.DBObject]" = []
-    for k in obj_types:
-        objs = helpers.query(cursor, k)
-        rv.extend(objs)
-    return rv
+def _get_objects(cursor) -> t.Iterator[obj.DBObject]:
+    return helpers.query_objects(cursor)
 
 
 def inspect(cursor) -> Inspection:
-    objects = _get_objects(cursor)
-    dependencies = helpers.query(cursor, "dependency")
+    objects = _index_by_id(_get_objects(cursor))
+    dependencies = list(helpers.query_dependencies(cursor))
     return Inspection(
-        objects=_index_by_id(objects),
+        objects=objects,
         dependencies=dependencies,
     )

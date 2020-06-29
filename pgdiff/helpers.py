@@ -16,10 +16,11 @@ if t.TYPE_CHECKING:
         te.Literal["enum"],
         te.Literal["function"],
         te.Literal["trigger"],
-        te.Literal["dependency"],
     ]
 
-    DBObjectList= t.Union[
+    ValidQueryType = t.Union[DBObjectType, te.Literal["dependency"]]
+
+    DBObjectList = t.Union[
         t.List[obj.Table],
         t.List[obj.View],
         t.List[obj.Index],
@@ -56,36 +57,45 @@ queries: "t.Dict[DBObjectType, str]" = {
     "enum": ENUM_QUERY,
     "function": FUNCTION_QUERY,
     "trigger": TRIGGER_QUERY,
-    "dependency": DEPENDENCY_QUERY,
 }
 
 
 @te.overload
-def query(cursor, obj_type: te.Literal["table"]) -> t.List[obj.Table]: ...
+def query(cursor, obj_type: te.Literal["table"]) -> t.Iterator[obj.Table]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["view"]) -> t.List[obj.View]: ...
+def query(cursor, obj_type: te.Literal["view"]) -> t.Iterator[obj.View]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["index"]) -> t.List[obj.Index]: ...
+def query(cursor, obj_type: te.Literal["index"]) -> t.Iterator[obj.Index]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["sequence"]) -> t.List[obj.Sequence]: ...
+def query(cursor, obj_type: te.Literal["sequence"]) -> t.Iterator[obj.Sequence]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["enum"]) -> t.List[obj.Enum]: ...
+def query(cursor, obj_type: te.Literal["enum"]) -> t.Iterator[obj.Enum]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["function"]) -> t.List[obj.Function]: ...
+def query(cursor, obj_type: te.Literal["function"]) -> t.Iterator[obj.Function]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["trigger"]) -> t.List[obj.Trigger]: ...
+def query(cursor, obj_type: te.Literal["trigger"]) -> t.Iterator[obj.Trigger]: ...
 @te.overload
-def query(cursor, obj_type: te.Literal["dependency"]) -> t.List[obj.Dependency]: ...
-def query(cursor, obj_type: "DBObjectType") -> "DBObjectList":
-    q = queries[obj_type]
+def query(cursor, obj_type: te.Literal["dependency"]) -> t.Iterator[obj.Dependency]: ...
+def query(
+    cursor,
+    obj_type: "ValidQueryType",
+) -> t.Iterator[t.Union[obj.DBObject, obj.Dependency]]:
+    q = DEPENDENCY_QUERY if obj_type == "dependency" else queries[obj_type]
     with open(q, "r") as f:
         sql = f.read()
     cursor.execute(sql)
-    results = []
     for record in cursor:
-        result = dict(**{"obj_type": obj_type, **record})
-        results.append(result)
-    return results  # type: ignore
+        yield dict(**{"obj_type": obj_type, **record})  # type: ignore
+
+
+def query_objects(cursor) -> t.Iterator[obj.DBObject]:
+    for k in queries:
+        for obj in query(cursor, k):
+            yield obj
+
+
+def query_dependencies(cursor) -> t.Iterator[obj.Dependency]:
+    return query(cursor, "dependency")
 
 
 def make_sequence_create(sequence: obj.Sequence) -> str:

@@ -146,5 +146,4 @@ DBObject = t.Union[
     Enum,
     Function,
     Trigger,
-    Dependency,
 ]
