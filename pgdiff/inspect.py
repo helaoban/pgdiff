@@ -23,8 +23,6 @@ def _make_graph(
 ) -> nx.DiGraph:
     graph = nx.DiGraph()
     for obj_id in objects:
-        if "timescale" in obj_id:
-            print(obj_id)
         graph.add_node(obj_id)
     for dep in dependencies:
         if dep["dependency_identity"] not in graph:
