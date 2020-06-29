@@ -241,7 +241,32 @@ WITH extensions AS (
 	-- INTERNAL
 	AND n.nspname NOT like 'pg_%' AND n.nspname <> 'information_schema'
 	AND dn.nspname NOT like 'pg_%' AND dn.nspname <> 'information_schema'
-    
+
+), column_defined_seq_deps AS (
+
+	SELECT 
+		c.oid AS oid,
+		format('%I.%I', dc.nspname, c.relname) AS identity,
+		cl.oid AS oid,
+		format('%I.%I', dcl.nspname, cl.relname) AS dependency_identity
+	FROM pg_depend d
+	INNER JOIN pg_class c ON c.oid = d.refobjid
+	INNER JOIN pg_namespace dc ON dc.oid = c.relnamespace
+	INNER JOIN pg_attrdef a ON a.oid = d.objid
+	INNER JOIN pg_class cl ON cl.oid = a.adrelid
+	INNER JOIN pg_namespace dcl ON dcl.oid = cl.relnamespace
+	-- EXCLUDE EXTENSIONS
+	LEFT OUTER JOIN extensions e ON e.oid = c.oid
+	LEFT OUTER JOIN extensions de ON de.oid = cl.oid
+	WHERE 
+		c.relkind = 'S'
+		AND d.deptype in ('n', 'a')
+		AND e.oid is null
+		AND de.oid is null
+		-- INTERNAL
+		AND dc.nspname NOT like 'pg_%' AND dc.nspname <> 'information_schema'
+		AND dcl.nspname NOT like 'pg_%' AND dcl.nspname <> 'information_schema'
+
 ), things AS (
 
 	SELECT
@@ -269,7 +294,7 @@ WITH extensions AS (
 			ON d.objid = rw.oid
 			AND deps.oid != rw.ev_class
 		INNER JOIN things t ON t.oid = rw.ev_class
-	WHERE d.deptype in ('n')
+	WHERE d.deptype in ('n', 'a')
 	AND rw.rulename = '_RETURN'
 
 	UNION
@@ -287,6 +312,10 @@ WITH extensions AS (
     UNION
 
     SELECT * FROM index_deps
+
+    UNION
+
+    SELECT * FROM column_defined_seq_deps
 
 )
 SELECT * FROM combined;
