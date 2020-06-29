@@ -8,8 +8,10 @@ def cli():
 
 @cli.command()
 @click.argument("dsn")
-def sync(dsn):
+@click.option("--schemas", "-s", type=str, default="")
+def sync(dsn, schemas: str):
     """Sync database @ [dsn] with schema."""
     from .sync import sync as do_sync
     schema = sys.stdin.read()
-    do_sync(schema, dsn)
+    include = schemas.split(" ") if schemas else None
+    do_sync(schema, dsn, include)

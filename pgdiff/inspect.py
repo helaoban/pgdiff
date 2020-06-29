@@ -1,4 +1,5 @@
 import os
+from fnmatch import fnmatch
 import typing as t
 
 import networkx as nx  # type: ignore
@@ -72,14 +73,23 @@ class Inspection:
         return rv
 
 
-def _get_objects(cursor) -> t.Iterator[obj.DBObject]:
-    return helpers.query_objects(cursor)
+def _filter_objects(
+    objects: t.Iterable[obj.DBObject],
+    patterns: t.Iterable[str],
+) -> t.Iterator[obj.DBObject]:
+    for obj in objects:
+        for pattern in patterns:
+            if fnmatch(obj["schema"], pattern):
+                yield obj
+                break
 
 
-def inspect(cursor) -> Inspection:
-    objects = _index_by_id(_get_objects(cursor))
+def inspect(cursor, include: t.Optional[t.Iterable[str]] = None) -> Inspection:
+    objects = helpers.query_objects(cursor)
+    if include is not None:
+        objects = _filter_objects(objects, include)
     dependencies = list(helpers.query_dependencies(cursor))
     return Inspection(
-        objects=objects,
+        objects=_index_by_id(objects),
         dependencies=dependencies,
     )
