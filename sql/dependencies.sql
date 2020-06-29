@@ -245,10 +245,10 @@ WITH extensions AS (
 ), column_defined_seq_deps AS (
 
 	SELECT 
-		c.oid AS oid,
-		format('%I.%I', dc.nspname, c.relname) AS identity,
 		cl.oid AS oid,
-		format('%I.%I', dcl.nspname, cl.relname) AS dependency_identity
+		format('%I.%I', dc.nspname, cl.relname) AS identity,
+		c.oid AS dependency_oid,
+		format('%I.%I', dcl.nspname, c.relname) AS dependency_identity
 	FROM pg_depend d
 	INNER JOIN pg_class c ON c.oid = d.refobjid
 	INNER JOIN pg_namespace dc ON dc.oid = c.relnamespace
