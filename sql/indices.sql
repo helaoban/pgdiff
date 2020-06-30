@@ -7,6 +7,7 @@ WITH extension_oids as (
     n.nspname AS schema,
     c.relname AS table_name,
     i.relname AS name,
+	format('%I.%I', n.nspname, i.relname) AS identity,
     pg_get_indexdef(i.oid) AS definition,
     (
         SELECT 

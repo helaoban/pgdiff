@@ -7,6 +7,7 @@ SELECT
     c.oid AS oid,
     n.nspname AS schema,
     c.relname AS name,
+	format('%I.%I', n.nspname, c.relname) AS identity,
     c.relkind AS type,
     pg_get_viewdef(c.oid) as definition
 FROM

@@ -44,6 +44,7 @@ SELECT
     t.oid,
     t.schema as schema,
     c.relname AS name,
+	format('%I.%I', t.schema, c.relname) AS identity,
     c.relkind AS type,
     t.columns as columns,
     t.column_types as column_types,

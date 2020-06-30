@@ -13,6 +13,7 @@ Constraint = t.Tuple[str, str]
 
 class Table(te.TypedDict):
     obj_type: te.Literal["table"]
+    identity: str
     oid: str
     schema: str
     name: str
@@ -32,6 +33,7 @@ class Table(te.TypedDict):
 
 class View(te.TypedDict):
     obj_type: te.Literal["view"]
+    identity: str
     oid: str
     schema: str
     name: str
@@ -41,6 +43,7 @@ class View(te.TypedDict):
 
 class Index(te.TypedDict):
     obj_type: te.Literal["index"]
+    identity: str
     oid: str
     schema: str
     table_name: str
@@ -60,6 +63,7 @@ class Index(te.TypedDict):
 
 class Sequence(te.TypedDict):
     obj_type: te.Literal["sequence"]
+    identity: str
     schema: str
     name: str
     data_type: str
@@ -75,6 +79,7 @@ class Sequence(te.TypedDict):
 
 class Enum(te.TypedDict):
     obj_type: te.Literal["enum"]
+    identity: str
     oid: str
     schema: str
     name: str
@@ -83,6 +88,7 @@ class Enum(te.TypedDict):
 
 class Function(te.TypedDict):
     obj_type: te.Literal["function"]
+    identity: str
     oid: str
     schema: str
     name: str
@@ -100,6 +106,7 @@ class Function(te.TypedDict):
 
 class Trigger(te.TypedDict):
     obj_type: te.Literal["trigger"]
+    identity: str
     oid: str
     schema: str
     name: str

@@ -8,43 +8,33 @@ from . import objects as obj, helpers
 from .diff import diff, create, drop
 
 
-IT = t.TypeVar("IT", bound=obj.DBObject)
-
-
-def _index_by_id(items: t.Iterable[IT]) -> t.Dict[str, IT]:
-    rv = {}
-    for x in items:
-        rv[helpers.get_obj_id(x)] = x
-    return rv
-
-
-def _make_graph(
-    objects: t.Dict[str, obj.DBObject],
-    dependencies: t.List[obj.Dependency],
-) -> nx.DiGraph:
-    graph = nx.DiGraph()
-    for obj_id in objects:
-        graph.add_node(obj_id)
-    for dep in dependencies:
-        if dep["dependency_identity"] not in graph:
-            continue
-        if dep["identity"] not in graph:
-            continue
-        graph.add_edge(dep["dependency_identity"], dep["identity"])
-    return graph
-
-
 class Inspection:
 
     def __init__(
         self,
-        objects: t.Dict[str, obj.DBObject],
-        dependencies: t.List[obj.Dependency],
+        objects: t.Iterable[obj.DBObject],
+        dependencies: t.Iterable[obj.Dependency],
         ctx: dict,
     ) -> None:
-        self.graph = _make_graph(objects, dependencies)
-        self.objects = objects
+        self.graph = nx.DiGraph()
+        self.objects: t.Dict[str, obj.DBObject] = {}
         self.ctx = ctx
+
+        self._populate_graph(objects, dependencies)
+
+    def _populate_graph(
+        self,
+        objects: t.Iterable[obj.DBObject],
+        dependencies: t.Iterable[obj.Dependency],
+    ):
+        for obj in objects:
+            i = obj["identity"]
+            self.graph.add_node(i)
+            self.objects[i] = obj
+        for dep in dependencies:
+            i, di = dep["identity"], dep["dependency_identity"]
+            if i in self.graph and di in self.graph:
+                self.graph.add_edge(di, i)
 
     def __getitem__(self, obj_id: str) -> obj.DBObject:
         return self.objects[obj_id]
@@ -52,14 +42,21 @@ class Inspection:
     def __contains__(self, obj_id: str) -> bool:
         return obj_id in self.objects
 
+    def __iter__(self) -> t.Iterator[obj.DBObject]:
+        for obj_id in nx.topological_sort(self.graph):
+            yield self[obj_id]
+
+    def __reversed__(self) -> t.Iterator[obj.DBObject]:
+        for obj_id in reversed(list(self.graph)):
+            yield self[obj_id]
+
     def diff(self, other: "Inspection") -> t.List[str]:
         rv = []
         ctx: dict = {"inspection": self, **self.ctx}
 
-        for obj_id in nx.topological_sort(self.graph):
-            obj = self[obj_id]
+        for obj in self:
             try:
-                other_obj = other[obj_id]
+                other_obj = other[obj["identity"]]
             except KeyError:
                 statement = create(ctx, obj)
                 if statement:
@@ -68,9 +65,9 @@ class Inspection:
                 for s in diff(ctx, other_obj, obj):
                     rv.append(helpers.format_statement(s))
 
-        for obj_id in reversed(list(nx.topological_sort(other.graph))):
-            if obj_id not in self:
-                other_obj = other[obj_id]
+        for obj in reversed(other):
+            if obj["identity"] not in self:
+                other_obj = other[obj["identity"]]
                 statement = drop(ctx, other_obj)
                 rv.append(helpers.format_statement(statement))
 
@@ -95,7 +92,7 @@ def inspect(cursor, include: t.Optional[t.Iterable[str]] = None) -> Inspection:
         objects = _filter_objects(objects, include)
     dependencies = list(helpers.query_dependencies(cursor))
     return Inspection(
-        objects=_index_by_id(objects),
+        objects=objects,
         dependencies=dependencies,
         ctx={"pg_version": pg_version},
     )

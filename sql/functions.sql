@@ -13,6 +13,15 @@ SELECT
         pp.proname,
         pg_get_function_identity_arguments(pp.oid)
     ) AS signature,
+	format(
+        '%I.%I', 
+        n.nspname, 
+        format(
+            '%I(%s)',
+            pp.proname,
+            pg_get_function_identity_arguments(pp.oid)
+        )
+    ) AS identity,
     pl.lanname AS language,
     pp.proisstrict AS is_strict,
     pp.prosecdef AS is_security_definer,

@@ -1,6 +1,7 @@
 SELECT
     s.sequence_schema AS schema,
     s.sequence_name AS name,
+	format('%I.%I', s.sequence_schema, s.sequence_name) AS identity,
     s.data_type AS data_type,
     s.numeric_precision AS precision,
     s.numeric_precision_radix AS precision_radix,

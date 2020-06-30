@@ -126,7 +126,7 @@ def make_sequence_create(sequence: obj.Sequence) -> str:
 
 def make_enum_create(enum: obj.Enum) -> str:
     return "CREATE TYPE %s AS ENUM (%s)" % (
-        get_obj_id(enum),
+        enum["identity"],
         ", ".join("'%s'" % e for e in enum["elements"])
     )
 
@@ -168,26 +168,6 @@ def make_column(column: obj.Column) -> str:
         default_key=default_key,
         default_val=default_val,
     )
-
-
-def get_obj_id(obj: obj.DBObject) -> str:
-    if obj["obj_type"] == "table":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "view":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "index":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "sequence":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "enum":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "function":
-        return "%s.%s" % (obj["schema"], obj["signature"])
-    if obj["obj_type"] == "trigger":
-        return "%s.%s" % (obj["schema"], obj["name"])
-    if obj["obj_type"] == "dependency":
-        return "%s.%s" % (obj["identity"], obj["dependency_identity"])
-    raise ValueError("Invalid obj: %s" % obj)
 
 
 def get_column(table: obj.Table, name: str) -> obj.Column:

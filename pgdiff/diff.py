@@ -122,7 +122,7 @@ def diff_table(ctx: dict, source: obj.Table, target: obj.Table) -> t.List[str]:
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
     if alterations:
-        table_id = helpers.get_obj_id(target)
+        table_id = target["identity"]
         statement = "ALTER TABLE {name} {alterations}".format(
             name=table_id,
             alterations=", ".join(alterations),
@@ -139,7 +139,7 @@ def diff_view(
 ) -> t.List[str]:
     if source["definition"] != target["definition"]:
         statement = (
-            "CREATE OR REPLACE VIEW %s AS\n" % helpers.get_obj_id(target)
+            "CREATE OR REPLACE VIEW %s AS\n" % target["identity"]
         ) + target["definition"]
         return [statement]
     return []
@@ -173,7 +173,7 @@ def diff_trigger(
     target: obj.Trigger
 ) -> t.List[str]:
     if source["definition"] != target["definition"]:
-        drop = "DROP TRIGGER %s" % helpers.get_obj_id(source)
+        drop = "DROP TRIGGER %s" % source["identity"]
         create = target["definition"]
         return [drop, create]
     return []
@@ -185,14 +185,14 @@ def diff_enum(ctx: dict, source: obj.Enum, target: obj.Enum) -> t.List[str]:
     common, source_unique, target_unique = diff_identifiers(
         set(source["elements"]), set(target["elements"]))
     if source_unique:
-        enum_id = helpers.get_obj_id(source)
+        enum_id = source["identity"]
         drop = "DROP TYPE %s" % enum_id
         create = helpers.make_enum_create(target)
         rv.extend([drop, create])
         return rv
 
     for el in target_unique:
-        enum_id = helpers.get_obj_id(target)
+        enum_id = target["identity"]
         alter = "ALTER TYPE %s ADD VALUE '%s'" % (enum_id, el)
         rv.append(alter)
 
@@ -201,7 +201,7 @@ def diff_enum(ctx: dict, source: obj.Enum, target: obj.Enum) -> t.List[str]:
 
 @register_drop("trigger")
 def drop_trigger(ctx: dict, trigger: obj.Trigger) -> str:
-    return "DROP TRIGGER %s" % helpers.get_obj_id(trigger)
+    return "DROP TRIGGER %s" % trigger["identity"]
 
 
 @register_create("trigger")
@@ -211,7 +211,7 @@ def create_trigger(ctx: dict, trigger: obj.Trigger) -> str:
 
 @register_drop("function")
 def drop_function(ctx: dict, function: obj.Function) -> str:
-    return "DROP FUNCTION %s" % helpers.get_obj_id(function)
+    return "DROP FUNCTION %s" % function["identity"]
 
 
 @register_create("function")
@@ -221,7 +221,7 @@ def create_function(ctx: dict, function: obj.Trigger) -> str:
 
 @register_drop("enum")
 def drop_enum(ctx: dict, enum: obj.Enum) -> str:
-    return "DROP TYPE %s" % helpers.get_obj_id(enum)
+    return "DROP TYPE %s" % enum["identity"]
 
 
 @register_create("enum")
@@ -231,7 +231,7 @@ def create_enum(ctx: dict, enum: obj.Enum) -> str:
 
 @register_drop("sequence")
 def drop_sequence(ctx: dict, sequence: obj.Sequence) -> str:
-    return "DROP SEQUENCE %s" % helpers.get_obj_id(sequence)
+    return "DROP SEQUENCE %s" % sequence["identity"]
 
 
 @register_create("sequence")
@@ -241,7 +241,7 @@ def create_sequence(ctx: dict, sequence: obj.Sequence) -> str:
 
 @register_drop("index")
 def drop_index(ctx: dict, index: obj.Index) -> str:
-    return "DROP INDEX %s" % helpers.get_obj_id(index)
+    return "DROP INDEX %s" % index["identity"]
 
 
 @register_create("index")
@@ -253,19 +253,19 @@ def create_index(ctx: dict, index: obj.Index) -> str:
 
 @register_drop("view")
 def drop_view(ctx: dict, view: obj.View) -> str:
-    return "DROP VIEW %s" % helpers.get_obj_id(view)
+    return "DROP VIEW %s" % view["identity"]
 
 
 @register_create("view")
 def create_view(ctx: dict, view: obj.View) -> str:
     return (
-        "CREATE VIEW %s AS\n" % helpers.get_obj_id(view)
+        "CREATE VIEW %s AS\n" % view["identity"]
     ) + view["definition"]
 
 
 @register_drop("table")
 def drop_table(ctx: dict, table: obj.Table) -> str:
-    return "DROP TABLE %s" % helpers.get_obj_id(table)
+    return "DROP TABLE %s" % table["identity"]
 
 
 @register_create("table")
