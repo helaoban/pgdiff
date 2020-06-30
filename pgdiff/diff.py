@@ -137,12 +137,20 @@ def diff_view(
     source: obj.View,
     target: obj.View
 ) -> t.List[str]:
+    statements = []
+    descendants = []
+    for obj in ctx["target_inspect"].descendants(target["identity"]):
+        if obj["obj_type"] == "view":
+            descendants.append(obj)
+            statements.append(drop_view(ctx, obj))
     if source["definition"] != target["definition"]:
         statement = (
             "CREATE OR REPLACE VIEW %s AS\n" % target["identity"]
         ) + target["definition"]
-        return [statement]
-    return []
+        statements.append(statement)
+    for d in descendants:
+        statements.append(create_view(ctx, obj))
+    return statements
 
 
 @register_diff("index")
