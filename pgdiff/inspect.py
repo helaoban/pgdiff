@@ -33,6 +33,9 @@ class Inspection:
             self.objects[i] = obj
         for dep in dependencies:
             i, di = dep["identity"], dep["dependency_identity"]
+
+            # TODO should there every be a situation where
+            # we have a dependency but not the object?
             if i in self.graph and di in self.graph:
                 self.graph.add_edge(di, i)
 
