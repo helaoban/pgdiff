@@ -142,7 +142,8 @@ def diff_view(
     for obj in ctx["target_inspect"].descendants(target["identity"]):
         if obj["obj_type"] == "view":
             descendants.append(obj)
-            statements.append(drop_view(ctx, obj))
+    for d in reversed(descendants):
+            statements.append(drop_view(ctx, d))
     if source["definition"] != target["definition"]:
         statement = (
             "CREATE OR REPLACE VIEW %s AS\n" % target["identity"]
