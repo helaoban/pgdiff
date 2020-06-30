@@ -60,7 +60,11 @@ class Inspection:
 
     def diff(self, other: "Inspection") -> t.List[str]:
         rv = []
-        ctx: dict = {"inspection": self, **self.ctx}
+        ctx: dict = {
+            "source_inspect": other,
+            "target_inspect": self,
+            **self.ctx
+        }
 
         for obj in self:
             try:
