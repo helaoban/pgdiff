@@ -149,7 +149,7 @@ def diff_view(
         ) + target["definition"]
         statements.append(statement)
     for d in descendants:
-        statements.append(create_view(ctx, obj))
+        statements.append(create_view(ctx, d))
     return statements
 
 
