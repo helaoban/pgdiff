@@ -137,20 +137,25 @@ def diff_view(
     source: obj.View,
     target: obj.View
 ) -> t.List[str]:
+    if source["definition"] == target["definition"]:
+        return []
+
     statements = []
     descendants = []
+
     for obj in ctx["target_inspect"].descendants(target["identity"]):
         if obj["obj_type"] == "view":
             descendants.append(obj)
+
     for d in reversed(descendants):
         statements.append(drop_view(ctx, d))
-    if source["definition"] != target["definition"]:
-        statement = (
-            "CREATE OR REPLACE VIEW %s AS\n" % target["identity"]
-        ) + target["definition"]
-        statements.append(statement)
+
+    statements.append(drop_view(ctx, target))
+    statements.append(create_view(ctx, target))
+
     for d in descendants:
         statements.append(create_view(ctx, d))
+
     return statements
 
 
