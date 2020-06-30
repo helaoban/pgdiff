@@ -51,11 +51,13 @@ class Inspection:
             yield self[obj_id]
 
     def ancestors(self, obj_id: str) -> t.Iterator[obj.DBObject]:
-        for obj_id in nx.ancestors(self.graph, obj_id):
+        sg = self.graph.subgraph(nx.ancestors(self.graph, obj_id))
+        for obj_id in reversed(list(nx.topological_sort(sg))):
             yield self[obj_id]
 
     def descendants(self, obj_id: str) -> t.Iterator[obj.DBObject]:
-        for obj_id in nx.descendants(self.graph, obj_id):
+        sg = self.graph.subgraph(nx.descendants(self.graph, obj_id))
+        for obj_id in nx.topological_sort(sg):
             yield self[obj_id]
 
     def diff(self, other: "Inspection") -> t.List[str]:
