@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import contextmanager
 import os
 import sys
 import typing as t
@@ -30,6 +31,23 @@ def register_drop(type: str):
         drop_handlers[type] = func
         return func
     return wrapped
+
+
+@contextmanager
+def dependent_views(
+    ctx: dict,
+    obj: obj.DBObject,
+    statements: t.List[str],
+) -> t.Iterator[None]:
+    descendants = []
+    for obj in ctx["target_inspect"].descendants(obj["identity"]):
+        if obj["obj_type"] == "view":
+            descendants.append(obj)
+    for d in reversed(descendants):
+        statements.append(drop_view(ctx, d))
+    yield
+    for d in descendants:
+        statements.append(create_view(ctx, d))
 
 
 def diff_identifiers(
@@ -118,17 +136,19 @@ def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
 
 @register_diff("table")
 def diff_table(ctx: dict, source: obj.Table, target: obj.Table) -> t.List[str]:
+    statements: t.List[str] = []
     alterations = []
     alterations.extend(diff_columns(source, target))
     alterations.extend(diff_constraints(source, target))
     if alterations:
-        table_id = target["identity"]
-        statement = "ALTER TABLE {name} {alterations}".format(
-            name=table_id,
-            alterations=", ".join(alterations),
-        )
-        return [statement]
-    return []
+        with dependent_views(ctx, target, statements):
+            table_id = target["identity"]
+            statement = "ALTER TABLE {name} {alterations}".format(
+                name=table_id,
+                alterations=", ".join(alterations),
+            )
+            statements.append(statement)
+    return statements
 
 
 @register_diff("view")
@@ -137,25 +157,12 @@ def diff_view(
     source: obj.View,
     target: obj.View
 ) -> t.List[str]:
+    statements: t.List[str] = []
     if source["definition"] == target["definition"]:
-        return []
-
-    statements = []
-    descendants = []
-
-    for obj in ctx["target_inspect"].descendants(target["identity"]):
-        if obj["obj_type"] == "view":
-            descendants.append(obj)
-
-    for d in reversed(descendants):
-        statements.append(drop_view(ctx, d))
-
-    statements.append(drop_view(ctx, target))
-    statements.append(create_view(ctx, target))
-
-    for d in descendants:
-        statements.append(create_view(ctx, d))
-
+        return statements
+    with dependent_views(ctx, target, statements):
+        statements.append(drop_view(ctx, target))
+        statements.append(create_view(ctx, target))
     return statements
 
 
