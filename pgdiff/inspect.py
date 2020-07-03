@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import os
 from fnmatch import fnmatch
 import typing as t
@@ -65,67 +65,50 @@ class Inspection:
         for obj_id in nx.topological_sort(sg):
             yield self[obj_id]
 
-    def diff(self, other: "Inspection") -> t.List[str]:
-        changeset: t.List[t.Tuple[str, str]] = []
-        rv = []
-        ctx: dict = {
-            "source_inspect": other,
-            "target_inspect": self,
-            **self.ctx
-        }
+    def _diff(self, other: "Inspection") -> t.Iterator[str]:
+        ctx: dict = {}
+        dropped: OrderedDict[str, None] = OrderedDict()
 
-        for obj in self:
-            ident = obj["identity"]
+        for target in self:
+            oid = target["identity"]
             try:
-                other_obj = other[ident]
+                source = other[oid]
             except KeyError:
-                changeset.append(("create", ident))
+                s = create(ctx, target)
+                if s:
+                    yield s
             else:
-                drops = []
-                for d in reversed(list(other.descendants(ident))):
-                    if d["obj_type"] == "view":
-                        drops.append(("drop", d["identity"]))
 
-                creates = []
-                for d in self.descendants(ident):
-                    if d["obj_type"] == "view":
-                        creates.append(("create", d["identity"]))
+                diffs = list(diff(ctx, source, target))
+                if not diffs:
+                    continue
 
-                changeset.extend(drops + [("alter", ident)] + creates)
+                has_dependants = target["obj_type"] in {"table", "view"}
 
-        for obj in reversed(other):
-            if obj["identity"] not in self:
-                other_obj = other[obj["identity"]]
-                changeset.append(("drop", obj["identity"]))
+                if has_dependants:
+                    for d in reversed(list(other.descendants(oid))):
+                        doid = d["identity"]
+                        if d["obj_type"] == "view" and doid not in dropped:
+                            yield drop(ctx, d)
+                            dropped[doid] = None
 
-        occurences: t.Dict[t.Tuple[str, str], t.List[int]] = defaultdict(list)
-        for i, x in enumerate(changeset):
-            occurences[x].append(i)
+                for s in diffs:
+                    yield s
 
-        uniq = []
-        for i, change in enumerate(changeset):
-            op = change[0]
-            occ = occurences[change]
-            if op == "drop" and i != min(occ):
-                continue
-            if op == "create" and i != max(occ):
-                continue
-            uniq.append(change)
+                dropped.pop(oid, None)
 
-        for op, ident in uniq:
-            if op == "alter":
-                source, target = other[ident], self[ident]
-                for s in diff(ctx, source, target):
-                    rv.append(helpers.format_statement(s))
-            if op == "drop":
-                statement = drop(ctx, other[ident])
-                rv.append(helpers.format_statement(statement))
-            if op == "create":
-                statement = create(ctx, self[ident])
-                if statement:
-                    rv.append(helpers.format_statement(statement))
+        for doid in dropped:
+            if doid in self:
+                yield create(ctx, self[doid])
 
-        return rv
+        for source in reversed(other):
+            if source["identity"] not in self:
+                yield drop(ctx, source)
+
+    def diff(self, other: "Inspection") -> t.List[str]:
+        return list(self._diff(other))
+
+
 
 
 def _filter_objects(
