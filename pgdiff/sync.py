@@ -10,13 +10,19 @@ from psycopg2 import connect as db_connect  # type: ignore
 from psycopg2.extras import RealDictCursor  # type: ignore
 
 
-def _wrap(statements: t.Iterable[str]) -> str:
+def _wrap(statements: t.Iterable[str], rollback: bool = False) -> str:
+    end = "ROLLBACK" if rollback else "COMMIT"
     script = "SET check_function_bodies = false;\n\n"
-    script += "BEGIN;\n\n%s\n\nCOMMIT;" % "\n\n".join(statements)
+    script += "BEGIN;\n\n%s\n\n%s;" % ("\n\n".join(statements), end)
     return script
 
 
-def sync(schema: str, dsn: str, schemas: t.Optional[t.List[str]] = None) -> None:
+def sync(
+    schema: str,
+    dsn: str,
+    schemas: t.Optional[t.List[str]] = None,
+    dry_run: bool = True
+) -> None:
     with contextlib.ExitStack() as stack:
         temp_db_dsn = stack.enter_context(temp_db(dsn))
         target = stack.enter_context(quick_cursor(temp_db_dsn, RealDictCursor))
@@ -27,4 +33,4 @@ def sync(schema: str, dsn: str, schemas: t.Optional[t.List[str]] = None) -> None
 
     statements = target_schema.diff(current_schema)
     if statements:
-        sys.stdout.write(_wrap(statements))
+        sys.stdout.write(_wrap(statements, rollback=dry_run))
