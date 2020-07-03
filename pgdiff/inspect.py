@@ -74,36 +74,30 @@ class Inspection:
             try:
                 source = other[oid]
             except KeyError:
-                s = create(ctx, target)
-                if s:
-                    yield s
+                yield from create(ctx, target)
             else:
 
                 diffs = list(diff(ctx, source, target))
                 if not diffs:
                     continue
 
-                has_dependants = target["obj_type"] in {"table", "view"}
+                for d in reversed(list(other.descendants(oid))):
+                    doid = d["identity"]
+                    if d["obj_type"] == "view" and doid not in dropped:
+                        yield from drop(ctx, d)
+                        dropped[doid] = None
 
-                if has_dependants:
-                    for d in reversed(list(other.descendants(oid))):
-                        doid = d["identity"]
-                        if d["obj_type"] == "view" and doid not in dropped:
-                            yield drop(ctx, d)
-                            dropped[doid] = None
-
-                for s in diffs:
-                    yield s
-
+                yield from diffs
                 dropped.pop(oid, None)
 
         for doid in dropped:
             if doid in self:
-                yield create(ctx, self[doid])
+                yield from create(ctx, self[doid])
 
         for source in reversed(other):
-            if source["identity"] not in self:
-                yield drop(ctx, source)
+            soid = source["identity"]
+            if soid not in self and soid not in dropped:
+                yield from drop(ctx, source)
 
     def diff(self, other: "Inspection") -> t.List[str]:
         return list(self._diff(other))
