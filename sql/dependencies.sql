@@ -115,7 +115,7 @@ WITH extensions AS (
         f.oid as oid,
         f.identity as identity,
         f.argtype_oid as dependency_oid,
-        f.argtype as dependency_indentity
+        f.argtype as dependency_identity
     FROM function_arg_types f
 
     UNION
@@ -124,7 +124,7 @@ WITH extensions AS (
         f.oid as oid,
         f.identity as identity,
         f.rtype_oid as dependency_oid,
-        f.rtype as dependency_indentity
+        f.rtype as dependency_identity
     FROM function_return_types f
 
 ), relations AS (
