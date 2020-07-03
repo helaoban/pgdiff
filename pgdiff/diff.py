@@ -222,7 +222,7 @@ def diff_enum(ctx: dict, source: obj.Enum, target: obj.Enum) -> t.List[str]:
 
 @register_drop("trigger")
 def drop_trigger(ctx: dict, trigger: obj.Trigger) -> str:
-    return "DROP TRIGGER %s" % trigger["identity"]
+    return "DROP TRIGGER %s ON %s" % (trigger["name"], trigger["table_name"])
 
 
 @register_create("trigger")
