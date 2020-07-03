@@ -196,9 +196,7 @@ def diff_trigger(
     target: obj.Trigger
 ) -> t.List[str]:
     if source["definition"] != target["definition"]:
-        drop = "DROP TRIGGER %s" % source["identity"]
-        create = target["definition"]
-        return [drop, create]
+        return [drop(ctx, source), create(ctx, target)]
     return []
 
 
@@ -207,11 +205,9 @@ def diff_enum(ctx: dict, source: obj.Enum, target: obj.Enum) -> t.List[str]:
     rv = []
     common, source_unique, target_unique = diff_identifiers(
         set(source["elements"]), set(target["elements"]))
+
     if source_unique:
-        enum_id = source["identity"]
-        drop = "DROP TYPE %s" % enum_id
-        create = helpers.make_enum_create(target)
-        rv.extend([drop, create])
+        rv.extend([drop(ctx, source), create(ctx, target)])
         return rv
 
     for el in target_unique:
