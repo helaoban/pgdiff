@@ -39,8 +39,8 @@ class Table(te.TypedDict):
     row_security: str
     force_row_security: str
     persistence: str
+    columns: t.List[Column]
     constraints: t.List[Constraint]
-    constraint_definitions: t.List[str]
 
 
 class View(te.TypedDict):

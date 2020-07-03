@@ -87,19 +87,21 @@ def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
 
 def diff_columns(source: obj.Table, target: obj.Table) -> t.List[str]:
     rv = []
+    source_columns = {c["name"]: c for c in source["columns"]}
+    target_columns = {c["name"]: c for c in target["columns"]}
     common, source_unique, target_unique = diff_identifiers(
-        set(source["columns"]), set(target["columns"]))
+        set(source_columns.keys()), set(target_columns))
 
-    for col_name in common:
-        source_col = helpers.get_column(source, col_name)
-        target_col = helpers.get_column(target, col_name)
+    for name in common:
+        source_col = source_columns[name]
+        target_col = target_columns[name]
         rv.extend(diff_column(source_col, target_col))
 
-    for col_name in source_unique:
-        rv.append("DROP COLUMN %s" % col_name)
+    for name in source_unique:
+        rv.append("DROP COLUMN %s" % name)
 
-    for col_name in target_unique:
-        col = helpers.get_column(target, col_name)
+    for name in target_unique:
+        col = target_columns[name]
         rv.append("ADD COLUMN %s" % helpers.make_column(col))
     return rv
 

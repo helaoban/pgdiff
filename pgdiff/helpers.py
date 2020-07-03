@@ -132,22 +132,21 @@ def make_enum_create(enum: obj.Enum) -> str:
 
 
 def make_constraint(constraint: obj.Constraint) -> str:
-    return "CONSTRAINT %s %s" % constraint
+    return "CONSTRAINT %s %s" % (
+        constraint["name"], constraint["definition"])
 
 
 def make_table_create(table: obj.Table) -> str:
     column_statements = []
-    for col_name in table["columns"]:
-        column = get_column(table, col_name)
-        column_str = make_column(column)
-        column_statements.append(column_str);
+    for col in table["columns"]:
+        column_statements.append(make_column(col));
     rv = "CREATE {}TABLE {} ({}".format(
         "UNLOGGED" if table["persistence"] == "u" else "",
         table["name"],
         ", ".join(column_statements)
     )
     constraints = [
-        make_constraint(get_constraint(table, c))
+        make_constraint(c)
         for c in table["constraints"]
     ]
     if constraints:
@@ -156,35 +155,18 @@ def make_table_create(table: obj.Table) -> str:
         rv = rv + ")"
     return rv
 
+
 def make_column(column: obj.Column) -> str:
-    name, type, default, is_notnull = column
-    notnull = " NOT NULL" if is_notnull else ""
+    default = column["default"]
+    notnull = " NOT NULL" if column["not_null"] else ""
     default_key = " DEFAULT" if default != "NULL" else ""
     default_val = " %s" % default if default != "NULL" else ""
     return "{name} {type}{notnull}{default_key}{default_val}".format(
-        name=name,
-        type=type,
+        name=column["name"],
+        type=column["type"],
         notnull=notnull,
         default_key=default_key,
         default_val=default_val,
-    )
-
-
-def get_column(table: obj.Table, name: str) -> obj.Column:
-    i = table["columns"].index(name)
-    return (
-        table["columns"][i],
-        table["column_types"][i],
-        table["column_defaults"][i],
-        table["not_null_columns"][i],
-    )
-
-
-def get_constraint(table: obj.Table, name: str) -> obj.Constraint:
-    i = table["constraints"].index(name)
-    return (
-        table["constraints"][i],
-        table["constraint_definitions"][i],
     )
 
 
@@ -193,17 +175,3 @@ def format_statement(statement: str) -> str:
     if not statement.endswith(";"):
         statement = statement + ";"
     return statement
-
-
-def topo_sort(graph: "nx.DiGraph", items: t.Dict[str, t.List[str]]) -> t.List[str]:
-    rv = []
-    for dep in nx.topological_sort(graph):
-        try:
-            rv.extend(items.pop(dep))
-        except KeyError:
-            pass
-
-    for _, statements in items.items():
-        rv.extend(statements)
-
-    return rv

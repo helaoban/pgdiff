@@ -1,6 +1,8 @@
+from collections import defaultdict
 import os
 from fnmatch import fnmatch
 import typing as t
+from pprint import pprint
 
 import networkx as nx  # type: ignore
 
@@ -31,6 +33,7 @@ class Inspection:
             i = obj["identity"]
             self.graph.add_node(i)
             self.objects[i] = obj
+
         for dep in dependencies:
             i, di = dep["identity"], dep["dependency_identity"]
 
@@ -50,8 +53,7 @@ class Inspection:
             yield self[obj_id]
 
     def __reversed__(self) -> t.Iterator[obj.DBObject]:
-        for obj_id in reversed(list(self.graph)):
-            yield self[obj_id]
+        return reversed(list(self))
 
     def ancestors(self, obj_id: str) -> t.Iterator[obj.DBObject]:
         sg = self.graph.subgraph(nx.ancestors(self.graph, obj_id))
@@ -64,6 +66,7 @@ class Inspection:
             yield self[obj_id]
 
     def diff(self, other: "Inspection") -> t.List[str]:
+        changeset: t.List[t.Tuple[str, str]] = []
         rv = []
         ctx: dict = {
             "source_inspect": other,
@@ -72,21 +75,55 @@ class Inspection:
         }
 
         for obj in self:
+            ident = obj["identity"]
             try:
-                other_obj = other[obj["identity"]]
+                other_obj = other[ident]
             except KeyError:
-                statement = create(ctx, obj)
-                if statement:
-                    rv.append(helpers.format_statement(statement))
+                changeset.append(("create", ident))
             else:
-                for s in diff(ctx, other_obj, obj):
-                    rv.append(helpers.format_statement(s))
+                drops = []
+                for d in reversed(list(other.descendants(ident))):
+                    if d["obj_type"] == "view":
+                        drops.append(("drop", d["identity"]))
+
+                creates = []
+                for d in self.descendants(ident):
+                    if d["obj_type"] == "view":
+                        creates.append(("create", d["identity"]))
+
+                changeset.extend(drops + [("alter", ident)] + creates)
 
         for obj in reversed(other):
             if obj["identity"] not in self:
                 other_obj = other[obj["identity"]]
-                statement = drop(ctx, other_obj)
+                changeset.append(("drop", obj["identity"]))
+
+        occurences: t.Dict[t.Tuple[str, str], t.List[int]] = defaultdict(list)
+        for i, x in enumerate(changeset):
+            occurences[x].append(i)
+
+        uniq = []
+        for i, change in enumerate(changeset):
+            op = change[0]
+            occ = occurences[change]
+            if op == "drop" and i != min(occ):
+                continue
+            if op == "create" and i != max(occ):
+                continue
+            uniq.append(change)
+
+        for op, ident in uniq:
+            if op == "alter":
+                source, target = other[ident], self[ident]
+                for s in diff(ctx, source, target):
+                    rv.append(helpers.format_statement(s))
+            if op == "drop":
+                statement = drop(ctx, other[ident])
                 rv.append(helpers.format_statement(statement))
+            if op == "create":
+                statement = create(ctx, self[ident])
+                if statement:
+                    rv.append(helpers.format_statement(statement))
 
         return rv
 
