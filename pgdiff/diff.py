@@ -62,25 +62,24 @@ def diff_identifiers(
 
 def diff_column(source: obj.Column, target: obj.Column) -> t.List[str]:
     rv = []
-    sname, stype, sdefault, snotnull = source
-    tname, ttype, tdefault, tnotnull = target
 
-    if stype != ttype:
-        change = "ALTER COLUMN %s TYPE %s" % (tname, ttype)
+    if source["type"] != target["type"]:
+        change = "ALTER COLUMN %s TYPE %s" % (target["name"], target["type"])
         rv.append(change)
 
-    if sdefault != tdefault:
-        if tdefault is None:
-            change = "ALTER COLUMN %s DROP DEFAULT" % tname
+    if source["default"] != target["default"]:
+        if target["default"] is None:
+            change = "ALTER COLUMN %s DROP DEFAULT" % target["name"]
         else:
-            change = "ALTER COLUMN %s SET DEFAULT %s" % (tname, tdefault)
+            change = "ALTER COLUMN %s SET DEFAULT %s" % (
+                target["name"], target["default"])
         rv.append(change)
 
-    if snotnull != tnotnull:
-        if tnotnull is True:
-            change = "ALTER COLUMN %s SET NOT NULL" % tname
+    if source["not_null"] != target["not_null"]:
+        if target["not_null"] is True:
+            change = "ALTER COLUMN %s SET NOT NULL" % target["name"]
         else:
-            change = "ALTER COLUMN %s DROP NOT NULL" % tname
+            change = "ALTER COLUMN %s DROP NOT NULL" % target["name"]
         rv.append(change)
 
     return rv
@@ -105,31 +104,32 @@ def diff_columns(source: obj.Table, target: obj.Table) -> t.List[str]:
     return rv
 
 
-def diff_constraint(source, target) -> t.List[str]:
+def diff_constraint(source: obj.Constraint, target: obj.Constraint) -> t.List[str]:
     rv = []
-    constraint_name, source_definition = source
-    _, target_definition = target
-    if source_definition != target_definition:
-        drop = "DROP CONSTRAINT %s" % constraint_name
-        add = "ADD %s %s" % (constraint_name, target_definition)
+    if source["definition"] != target["definition"]:
+        drop = "DROP CONSTRAINT %s" % source["name"]
+        add = "ADD %s %s" % (source["name"], target["definition"])
         rv.extend([drop, add])
     return rv
 
 
+@register_diff("constraint")
 def diff_constraints(source: obj.Table, target: obj.Table) -> t.List[str]:
     rv = []
+    source_constraints = {c["name"]: c for c in source["constraints"]}
+    target_constraints = {c["name"]: c for c in target["constraints"]}
     common, source_unique, target_unique = diff_identifiers(
-        set(source["constraints"]), set(target["constraints"]))
-    for constraint_name in source_unique:
-        drop = "DROP CONSTRAINT %s" % constraint_name
+        set(source_constraints.keys()), set(target_constraints))
+    for name in source_unique:
+        drop = "DROP CONSTRAINT %s" % name
         rv.append(drop)
-    for constraint_name in target_unique:
-        _, definition = helpers.get_constraint(target, constraint_name)
-        add = "ADD %s %s" % (constraint_name, definition)
+    for name in target_unique:
+        constraint = target_constraints[name]
+        add = "ADD %s %s" % (name, constraint["definition"])
         rv.append(add)
-    for constraint_name in common:
-        source_constraint = helpers.get_constraint(source, constraint_name)
-        target_constraint = helpers.get_constraint(target, constraint_name)
+    for name in common:
+        source_constraint = source_constraints[name]
+        target_constraint = target_constraints[name]
         rv.extend(diff_constraint(source_constraint, target_constraint))
     return rv
 

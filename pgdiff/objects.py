@@ -6,9 +6,25 @@ if t.TYPE_CHECKING:
     import networkx as nx  # type: ignore
 
 
-Column = t.Tuple[str, str, str, int]
 DatabaseIdDiff = t.Tuple[t.Set[str], t.Set[str], t.Set[str]]
-Constraint = t.Tuple[str, str]
+
+
+class Constraint(te.TypedDict):
+    obj_type: te.Literal["constraint"]
+    identity: str
+    oid: str
+    schema: str
+    name: str
+    definition: str
+    index: str
+
+
+class Column(te.TypedDict):
+    obj_type: te.Literal["column"]
+    name: str
+    type: str
+    default: t.Any
+    not_null: bool
 
 
 class Table(te.TypedDict):
@@ -18,16 +34,12 @@ class Table(te.TypedDict):
     schema: str
     name: str
     type: str
-    columns: t.List[str]
-    column_types: t.List[str]
-    column_defaults: t.List[t.Any]
-    not_null_columns: t.List[bool]
     parent_table: str
     partition_def: str
     row_security: str
     force_row_security: str
     persistence: str
-    constraints: t.List[str]
+    constraints: t.List[Constraint]
     constraint_definitions: t.List[str]
 
 
