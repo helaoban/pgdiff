@@ -149,7 +149,8 @@ def diff_view(
     target: obj.View
 ) -> t.Iterator[str]:
     if source["definition"] != target["definition"]:
-        yield from drop_view(ctx, target)
+        if source["identity"] not in ctx["dropped"]:
+            yield from drop_view(ctx, target)
         yield from create_view(ctx, target)
 
 
