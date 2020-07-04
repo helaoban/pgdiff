@@ -24,10 +24,12 @@ WITH extension_oids as (
     indimmediate is_immediate,
     indisclustered is_clustered, 
     pg_get_expr(indexprs, indrelid) key_expressions,
-    pg_get_expr(indpred, indrelid) partial_predicate
+    pg_get_expr(indpred, indrelid) partial_predicate,
+    COALESCE(con.oid::int, 0)::boolean as from_constraint
 FROM pg_index x
     JOIN pg_class c ON c.oid = x.indrelid
     JOIN pg_class i ON i.oid = x.indexrelid
+    LEFT JOIN pg_constraint con ON con.conindid = i.oid
     LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
     LEFT JOIN extension_oids e ON c.oid = e.oid OR i.oid = e.oid
 WHERE c.relkind IN ('r', 'm', 'p') AND i.relkind IN ('i', 'I')
