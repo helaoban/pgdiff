@@ -18,9 +18,17 @@ networkx = "^2.4"
 [tool.poetry.dev-dependencies]
 pytest = "^5.4.2"
 mypy = ">=0.770"
+pylint = "^2.5.3"
 
 [tool.poetry.scripts]
 pgdiff = "pgdiff.cli:cli"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring"
+]
+
 
 [build-system]
 requires = ["poetry>=0.12"]
