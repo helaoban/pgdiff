@@ -71,6 +71,7 @@ class Index(te.TypedDict):
     is_clustered: bool
     key_expressions: str
     partial_predicate: str
+    from_constraint: bool
 
 
 class Sequence(te.TypedDict):
