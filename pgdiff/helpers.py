@@ -2,8 +2,6 @@ import os
 import typing as t
 import typing_extensions as te
 
-import networkx as nx  # type: ignore
-
 from . import objects as obj
 
 
@@ -81,8 +79,8 @@ def query(
     obj_type: "ValidQueryType",
 ) -> t.Iterator[t.Union[obj.DBObject, obj.Dependency]]:
     q = DEPENDENCY_QUERY if obj_type == "dependency" else queries[obj_type]
-    with open(q, "r") as f:
-        sql = f.read()
+    with open(q, "r") as file:
+        sql = file.read()
     cursor.execute(sql)
     for record in cursor:
         yield dict(**{"obj_type": obj_type, **record})  # type: ignore
@@ -90,8 +88,8 @@ def query(
 
 def query_objects(cursor) -> t.Iterator[obj.DBObject]:
     for k in queries:
-        for obj in query(cursor, k):
-            yield obj
+        for o in query(cursor, k):
+            yield o
 
 
 def query_dependencies(cursor) -> t.Iterator[obj.Dependency]:
@@ -139,7 +137,7 @@ def make_constraint(constraint: obj.Constraint) -> str:
 def make_table_create(table: obj.Table) -> str:
     column_statements = []
     for col in table["columns"]:
-        column_statements.append(make_column(col));
+        column_statements.append(make_column(col))
     rv = "CREATE {}TABLE {} ({}".format(
         "UNLOGGED" if table["persistence"] == "u" else "",
         table["name"],

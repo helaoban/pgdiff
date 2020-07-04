@@ -2,12 +2,10 @@ import contextlib
 import sys
 import typing as t
 
-from .diff import diff
+from psycopg2.extras import RealDictCursor  # type: ignore
+
 from .inspect import inspect
 from .utils import temp_db, quick_cursor
-
-from psycopg2 import connect as db_connect  # type: ignore
-from psycopg2.extras import RealDictCursor  # type: ignore
 
 
 def _wrap(statements: t.Iterable[str], rollback: bool = False) -> str:

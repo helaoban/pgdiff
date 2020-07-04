@@ -1,15 +1,14 @@
 import random
 import string
-import typing as t
 import contextlib
+from copy import copy
 import os
 import urllib.parse
-from copy import copy
+from time import sleep
 
 from psycopg2 import connect as db_connect, sql  # type: ignore
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT  # type: ignore
 from psycopg2.errors import InsufficientPrivilege  # type: ignore
-from time import sleep
 
 
 KILL_CONN = """
@@ -291,7 +290,7 @@ def temp_db(dsn: str, template: str = "", quiet: bool = True):
 
 
 @contextlib.contextmanager
-def quick_cursor(dsn, cursor_factory = None):
+def quick_cursor(dsn, cursor_factory=None):
     conn = db_connect(dsn)
     if cursor_factory is not None:
         cur = conn.cursor(cursor_factory=cursor_factory)
