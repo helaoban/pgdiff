@@ -8,6 +8,7 @@ WITH extension_oids AS (
 
     SELECT
         a.attrelid as table_oid,
+        a.attnum AS num,
         a.attname AS name,
         format_type(a.atttypid, atttypmod) AS type,
         COALESCE(pg_get_expr(ad.adbin, ad.adrelid), 'NULL') AS default,
@@ -18,6 +19,7 @@ WITH extension_oids AS (
         AND a.attnum = ad.adnum
     WHERE a.attnum > 0
     AND a.attisdropped = FALSE
+    ORDER BY a.attnum
 
 ), constraints AS (
 
