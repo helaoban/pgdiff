@@ -132,8 +132,8 @@ def diff_table(
     target: obj.Table
 ) -> t.Iterator[str]:
     alterations = list(chain(
+        diff_constraints(ctx, source, target),
         diff_columns(source, target),
-        diff_constraints(ctx, source, target)
     ))
     if alterations:
         yield "ALTER TABLE {name} {alterations}".format(
