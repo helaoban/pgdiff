@@ -66,8 +66,8 @@ class Inspection:
             yield self[obj_id]
 
     def _diff(self, other: "Inspection") -> t.Iterator[str]:
-        ctx: dict = {}
         dropped: OrderedDict[str, None] = OrderedDict()
+        ctx: dict = {"dropped": dropped}
 
         for target in self:
             oid = target["identity"]
