@@ -83,7 +83,7 @@ class Inspection:
 
                 for d in reversed(list(other.descendants(oid))):
                     doid = d["identity"]
-                    if d["obj_type"] == "view" and doid not in dropped:
+                    if d["obj_type"] in {"view", "function"} and doid not in dropped:
                         yield from drop(ctx, d)
                         dropped[doid] = None
 
