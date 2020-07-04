@@ -246,12 +246,13 @@ def create_sequence(ctx: dict, sequence: obj.Sequence) -> t.Iterator[str]:
 
 @register_drop("index")
 def drop_index(ctx: dict, index: obj.Index) -> t.Iterator[str]:
-    yield "DROP INDEX %s" % index["identity"]
+    if not index["from_constraint"]:
+        yield "DROP INDEX %s" % index["identity"]
 
 
 @register_create("index")
 def create_index(ctx: dict, index: obj.Index) -> t.Iterator[str]:
-    if not index["is_unique"] and not index["is_pk"]:
+    if not index["from_constraint"]:
         yield index["definition"]
 
 
