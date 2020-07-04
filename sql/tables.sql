@@ -80,11 +80,11 @@ WITH extension_oids AS (
 
     SELECT
         t.oid as oid,
-        json_agg(to_jsonb(col) - 'table_oid') as columns,
-        json_agg(to_jsonb(con) - 'table_oid') as constraints
+        json_agg(DISTINCT col.* ) as columns,
+        json_agg(DISTINCT con.* ) as constraints
     FROM table_attrs t
-    LEFT JOIN columns col on col.table_oid = t.oid
-    LEFT OUTER JOIN constraints con ON con.table_oid = t.oid
+    INNER JOIN columns col on col.table_oid = t.oid
+    INNER JOIN constraints con ON con.table_oid = t.oid
     GROUP BY t.oid
 )
 SELECT
@@ -92,4 +92,4 @@ SELECT
     ta.columns,
     ta.constraints
 FROM table_attrs t
-INNER JOIN table_aggs ta on ta.oid = t.oid
+INNER JOIN table_aggs ta ON ta.oid = t.oid;
