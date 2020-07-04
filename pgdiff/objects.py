@@ -2,10 +2,6 @@ import typing as t
 import typing_extensions as te
 
 
-if t.TYPE_CHECKING:
-    import networkx as nx  # type: ignore
-
-
 DatabaseIdDiff = t.Tuple[t.Set[str], t.Set[str], t.Set[str]]
 
 
