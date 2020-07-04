@@ -100,9 +100,10 @@ class Inspection:
                 yield from drop(ctx, source)
 
     def diff(self, other: "Inspection") -> t.List[str]:
-        return list(self._diff(other))
-
-
+        rv = []
+        for s in self._diff(other):
+            rv.append(helpers.format_statement(s))
+        return rv
 
 
 def _filter_objects(
