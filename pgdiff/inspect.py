@@ -2,7 +2,6 @@ from collections import defaultdict, OrderedDict
 import os
 from fnmatch import fnmatch
 import typing as t
-from pprint import pprint
 
 import networkx as nx  # type: ignore
 
