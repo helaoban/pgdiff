@@ -1,5 +1,4 @@
-from collections import defaultdict, OrderedDict
-import os
+from collections import OrderedDict
 from fnmatch import fnmatch
 import typing as t
 
@@ -28,10 +27,10 @@ class Inspection:
         objects: t.Iterable[obj.DBObject],
         dependencies: t.Iterable[obj.Dependency],
     ):
-        for obj in objects:
-            i = obj["identity"]
+        for o in objects:
+            i = o["identity"]
             self.graph.add_node(i)
-            self.objects[i] = obj
+            self.objects[i] = o
 
         for dep in dependencies:
             i, di = dep["identity"], dep["dependency_identity"]
@@ -56,16 +55,16 @@ class Inspection:
 
     def ancestors(self, obj_id: str) -> t.Iterator[obj.DBObject]:
         sg = self.graph.subgraph(nx.ancestors(self.graph, obj_id))
-        for obj_id in reversed(list(nx.topological_sort(sg))):
-            yield self[obj_id]
+        for aid in reversed(list(nx.topological_sort(sg))):
+            yield self[aid]
 
     def descendants(self, obj_id: str) -> t.Iterator[obj.DBObject]:
         sg = self.graph.subgraph(nx.descendants(self.graph, obj_id))
-        for obj_id in nx.topological_sort(sg):
-            yield self[obj_id]
+        for doi in nx.topological_sort(sg):
+            yield self[doi]
 
     def _diff(self, other: "Inspection") -> t.Iterator[str]:
-        dropped: OrderedDict[str, None] = OrderedDict()
+        dropped: "OrderedDict[str, None]" = OrderedDict()
         ctx: dict = {"dropped": dropped}
 
         for target in self:
@@ -109,10 +108,10 @@ def _filter_objects(
     objects: t.Iterable[obj.DBObject],
     patterns: t.Iterable[str],
 ) -> t.Iterator[obj.DBObject]:
-    for obj in objects:
+    for o in objects:
         for pattern in patterns:
-            if fnmatch(obj["schema"], pattern):
-                yield obj
+            if fnmatch(o["schema"], pattern):
+                yield o
                 break
 
 
