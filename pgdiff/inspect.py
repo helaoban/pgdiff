@@ -88,7 +88,7 @@ class Inspection:
                 yield from diffs
                 dropped.pop(oid, None)
 
-        for doid in dropped:
+        for doid in reversed(dropped):
             if doid in self:
                 yield from create(ctx, self[doid])
 
