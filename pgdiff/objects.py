@@ -12,7 +12,7 @@ class Constraint(te.TypedDict):
     schema: str
     name: str
     definition: str
-    index: str
+    index: t.Optional[str]
 
 
 class Column(te.TypedDict):

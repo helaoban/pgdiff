@@ -30,11 +30,16 @@ WITH extension_oids AS (
         ct.conname AS name,
 	    format('%I.%I', n.nspname, ct.conname) AS identity,
         pg_get_constraintdef(ct.oid) AS definition,
-	    format('%I.%I', n.nspname, ci.relname) AS index
+        (
+            CASE WHEN ci.relname is not NULL THEN
+                format('%I.%I', n.nspname, ci.relname)
+            ELSE null
+            END
+        ) as index
     FROM pg_constraint ct
     INNER JOIN pg_catalog.pg_namespace n ON n.oid = ct.connamespace
-    INNER JOIN pg_catalog.pg_index idx ON idx.indexrelid = ct.conindid
-    INNER JOIN pg_catalog.pg_class ci ON ci.oid = idx.indexrelid
+    LEFT JOIN pg_catalog.pg_index idx ON idx.indexrelid = ct.conindid
+    LEFT JOIN pg_catalog.pg_class ci ON ci.oid = idx.indexrelid
 
 ), table_attrs AS (
 
