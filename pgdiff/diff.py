@@ -113,7 +113,7 @@ def diff_constraints(
         yield "DROP CONSTRAINT %s" % name
     for name in target_unique:
         constraint = target_constraints[name]
-        yield "ADD %s %s" % (name, constraint["definition"])
+        yield "ADD CONSTRAINT %s %s" % (name, constraint["definition"])
     for name in common:
         source_constraint = source_constraints[name]
         target_constraint = target_constraints[name]
