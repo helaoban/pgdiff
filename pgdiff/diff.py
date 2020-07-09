@@ -96,7 +96,7 @@ def diff_constraint(
 ) -> t.Iterator[str]:
     if source["definition"] != target["definition"]:
         yield "DROP CONSTRAINT %s" % source["name"]
-        yield "ADD %s %s" % (source["name"], target["definition"])
+        yield "ADD CONSTRAINT %s %s" % (source["name"], target["definition"])
 
 
 @register_diff("constraint")
